@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ReelSphere</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="bg-video-shell" aria-hidden="true">
+      <video class="bg-video" autoplay muted loop playsinline preload="metadata">
+        <source src="/bg_video.mp4" type="video/mp4" />
+      </video>
+      <div class="bg-video-overlay"></div>
+      <div class="bg-video-vignette"></div>
+    </div>
+
+    <div class="ambient ambient-left"></div>
+    <div class="ambient ambient-right"></div>
+
+    <div class="page-shell">
+      <header class="hero reveal" data-reveal>
+        <div class="hero-nav">
+          <div>
+            <p class="eyebrow">ReelSphere</p>
+            <span class="nav-subtitle">AI cinema discovery engine</span>
+          </div>
+          <div class="nav-pill">4 live tools</div>
+        </div>
+
+        <div class="hero-main">
+          <div class="hero-copy">
+            <h1>Find your next obsession before the credits even roll.</h1>
+            <p class="lede">
+              Search by mood, get tighter recommendations, talk to a film brain, and decode the patterns behind your taste in one streaming-style workspace.
+            </p>
+            <div class="hero-actions">
+              <span class="hero-chip">Natural search</span>
+              <span class="hero-chip">Taste decoder</span>
+              <span class="hero-chip">Gemini powered</span>
+            </div>
+          </div>
+
+          <aside class="hero-spotlight">
+            <span class="spotlight-label">Now running</span>
+            <strong>Search. Recommend. Chat. Analyze.</strong>
+            <p>Built like a modern streaming dashboard, tuned for movie people.</p>
+            <div class="spotlight-list">
+              <div class="spotlight-item">
+                <span>01</span>
+                <p>Describe a vibe and surface films with tighter thematic matches.</p>
+              </div>
+              <div class="spotlight-item">
+                <span>02</span>
+                <p>Use recommendation logic that reacts to patterns, not just genre tags.</p>
+              </div>
+              <div class="spotlight-item">
+                <span>03</span>
+                <p>Switch into conversational mode for film knowledge and watch guidance.</p>
+              </div>
+              <div class="spotlight-item">
+                <span>04</span>
+                <p>Decode your viewing profile and push beyond your comfort zone.</p>
+              </div>
+            </div>
+            <div class="spotlight-metrics">
+              <div>
+                <strong>3</strong>
+                <span>core tools</span>
+              </div>
+              <div>
+                <strong>1</strong>
+                <span>shared taste graph</span>
+              </div>
+              <div>
+                <strong>Live</strong>
+                <span>runtime model status</span>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </header>
+
+      <section id="runtime-banner" class="runtime-banner runtime-banner-loading reveal" aria-live="polite" data-reveal>
+        <div class="runtime-copy">
+          <div class="runtime-head">
+            <span class="runtime-label">Now Running</span>
+            <span class="runtime-dot"></span>
+          </div>
+          <strong id="runtime-title">Checking active model...</strong>
+          <p id="runtime-detail">Loading live server health and fallback chain.</p>
+        </div>
+        <div class="runtime-side">
+          <div id="runtime-chips" class="runtime-chips"></div>
+        </div>
+      </section>
+
+      <main class="grid">
+        <section class="panel panel-search reveal" data-reveal>
+          <div class="panel-media">
+            <img src="/natural_search.jpg" alt="Natural search visual" />
+            <div class="panel-media-overlay"></div>
+          </div>
+          <div class="panel-header">
+            <div>
+              <span class="panel-kicker">01</span>
+              <h2>Natural Search</h2>
+            </div>
+            <p>Describe atmosphere, pacing, genre, era, or what should be excluded.</p>
+          </div>
+          <form id="search-form" class="stack">
+            <textarea id="search-query" placeholder="Neo-noir crime films with rain, restraint, and moral tension. No superheroes."></textarea>
+            <button type="submit">Find titles</button>
+          </form>
+          <div id="search-output" class="result-area empty">Results will appear here.</div>
+        </section>
+
+        <section class="panel panel-recs reveal" data-reveal>
+          <div class="panel-media">
+            <img src="/recommendation.jpg" alt="Recommendation visual" />
+            <div class="panel-media-overlay"></div>
+          </div>
+          <div class="panel-header">
+            <div>
+              <span class="panel-kicker">02</span>
+              <h2>Recommendations</h2>
+            </div>
+            <p>Tell ReelSphere what works for you and let it connect the dots.</p>
+          </div>
+          <form id="recommend-form" class="stack">
+            <textarea id="recommend-query" placeholder="I like Heat, Zodiac, Collateral, and quiet thrillers with precision. Skip broad comedy."></textarea>
+            <button type="submit">Get recommendations</button>
+          </form>
+          <div id="recommend-output" class="result-area empty">Recommendations will appear here.</div>
+        </section>
+
+        <section class="panel panel-chat reveal" data-reveal>
+          <div class="panel-media panel-media-tall">
+            <img src="/film_brain.jpg" alt="Film brain visual" />
+            <div class="panel-media-overlay"></div>
+          </div>
+          <div class="panel-header">
+            <div>
+              <span class="panel-kicker">03</span>
+              <h2>Film Brain</h2>
+            </div>
+            <p>Ask about directors, filmographies, hidden links, watch orders, or double features.</p>
+          </div>
+          <div id="chat-thread" class="chat-thread"></div>
+          <form id="chat-form" class="chat-form">
+            <input id="chat-input" type="text" placeholder="Ask a movie question..." />
+            <button type="submit">Send</button>
+          </form>
+        </section>
+
+        <section class="panel panel-analyzer reveal" data-reveal>
+          <div class="panel-media">
+            <img src="/taste_decoder.jpg" alt="Taste decoder visual" />
+            <div class="panel-media-overlay"></div>
+          </div>
+          <div class="panel-header">
+            <div>
+              <span class="panel-kicker">04</span>
+              <h2>Taste Decoder</h2>
+            </div>
+            <p>Paste favorite titles, filmmakers, genres, and hard no's to map your viewing profile.</p>
+          </div>
+          <form id="analyze-form" class="stack">
+            <textarea id="analyze-query" placeholder="Favorites: In the Mood for Love, Arrival, The Social Network, Before Sunrise. I like precision and melancholy."></textarea>
+            <button type="submit">Analyze taste</button>
+          </form>
+          <div id="analyze-output" class="result-area empty">Your taste profile will appear here.</div>
+        </section>
+      </main>
+    </div>
+
+    <template id="loading-template">
+      <div class="loading">
+        <span></span><span></span><span></span><span></span>
+      </div>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

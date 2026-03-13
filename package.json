@@ -1,0 +1,16 @@
+{
+  "name": "ai-movie-explorer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Movie Explorer with natural language search, recommendations, chat, and taste analysis.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.2.0"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  }
+}
