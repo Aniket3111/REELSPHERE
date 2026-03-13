@@ -9,18 +9,25 @@ loadEnv();
 
 const PORT = Number(process.env.PORT || 3000);
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_BACKUP_API_KEYS = parseApiKeyList(process.env.GEMINI_BACKUP_API_KEYS || "");
+const GEMINI_BACKUP_API_KEYS = parseApiKeyList(
+  process.env.GEMINI_BACKUP_API_KEYS || "",
+);
 const GEMINI_KEYS = [GEMINI_API_KEY, ...GEMINI_BACKUP_API_KEYS].filter(Boolean);
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
 const GEMINI_FALLBACK_MODELS = parseModelList(
-  process.env.GEMINI_FALLBACK_MODELS || "gemini-2.0-flash-lite,gemini-2.0-flash,gemini-1.5-flash",
+  process.env.GEMINI_FALLBACK_MODELS ||
+    "gemini-2.0-flash-lite,gemini-2.0-flash,gemini-1.5-flash",
 );
 const WATCHMODE_API_KEY = process.env.WATCHMODE_API_KEY || "";
 const WATCHMODE_REGION = (process.env.WATCHMODE_REGION || "IN").toUpperCase();
 const WATCHMODE_BASE_URL = "https://api.watchmode.com/v1";
 const DEFAULT_POSTER_PATH = "/1.jpg";
-const RATE_LIMIT_MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 5);
-const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60 * 60 * 1000);
+const RATE_LIMIT_MAX_REQUESTS = Number(
+  process.env.RATE_LIMIT_MAX_REQUESTS || 5,
+);
+const RATE_LIMIT_WINDOW_MS = Number(
+  process.env.RATE_LIMIT_WINDOW_MS || 60 * 60 * 1000,
+);
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_MS || 6 * 60 * 60 * 1000);
 const PUBLIC_DIR = path.join(__dirname, "public");
 
@@ -115,29 +122,48 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    if (req.method === "POST" && requestUrl.pathname === "/api/recommendations") {
-      return handleJsonEndpoint(req, res, "/api/recommendations", async (body) => {
-        const prompt = `User taste input:\n${body.query || ""}`;
-        const data = await callModelJson(SYSTEM_PROMPTS.recommendations, prompt);
-        data.recommendations = await enrichMovieList(data.recommendations);
-        return { data };
-      });
+    if (
+      req.method === "POST" &&
+      requestUrl.pathname === "/api/recommendations"
+    ) {
+      return handleJsonEndpoint(
+        req,
+        res,
+        "/api/recommendations",
+        async (body) => {
+          const prompt = `User taste input:\n${body.query || ""}`;
+          const data = await callModelJson(
+            SYSTEM_PROMPTS.recommendations,
+            prompt,
+          );
+          data.recommendations = await enrichMovieList(data.recommendations);
+          return { data };
+        },
+      );
     }
 
     if (req.method === "POST" && requestUrl.pathname === "/api/analyze-taste") {
-      return handleJsonEndpoint(req, res, "/api/analyze-taste", async (body) => {
-        const prompt = `Taste notes:\n${body.query || ""}`;
-        const data = await callModelJson(SYSTEM_PROMPTS.analyzer, prompt);
-        data.nextPicks = await enrichMovieList(data.nextPicks);
-        return { data };
-      });
+      return handleJsonEndpoint(
+        req,
+        res,
+        "/api/analyze-taste",
+        async (body) => {
+          const prompt = `Taste notes:\n${body.query || ""}`;
+          const data = await callModelJson(SYSTEM_PROMPTS.analyzer, prompt);
+          data.nextPicks = await enrichMovieList(data.nextPicks);
+          return { data };
+        },
+      );
     }
 
     if (req.method === "POST" && requestUrl.pathname === "/api/chat") {
       return handleJsonEndpoint(req, res, "/api/chat", async (body) => {
         const messages = Array.isArray(body.messages) ? body.messages : [];
         const transcript = messages
-          .map((message) => `${message.role === "assistant" ? "Assistant" : "User"}: ${message.content}`)
+          .map(
+            (message) =>
+              `${message.role === "assistant" ? "Assistant" : "User"}: ${message.content}`,
+          )
           .join("\n");
         const answer = await callModelText(SYSTEM_PROMPTS.chat, transcript);
         return { data: { answer } };
@@ -198,7 +224,10 @@ function loadEnv() {
     }
 
     const key = line.slice(0, index).trim();
-    const value = line.slice(index + 1).trim().replace(/^"|"$/g, "");
+    const value = line
+      .slice(index + 1)
+      .trim()
+      .replace(/^"|"$/g, "");
     if (!(key in process.env)) {
       process.env[key] = value;
     }
@@ -209,7 +238,8 @@ async function handleJsonEndpoint(req, res, routeKey, handler) {
   try {
     if (!GEMINI_KEYS.length) {
       return sendJson(res, 500, {
-        error: "No Gemini API keys are configured. Set GEMINI_API_KEY in your .env file.",
+        error:
+          "No Gemini API keys are configured. Set GEMINI_API_KEY in your .env file.",
       });
     }
 
@@ -224,7 +254,7 @@ async function handleJsonEndpoint(req, res, routeKey, handler) {
     const limitState = consumeRateLimit(ip);
     if (!limitState.allowed) {
       return sendJson(res, 429, {
-        error: `Rate limit reached for this IP. Try again in ${Math.ceil(limitState.retryAfterMs / 1000)}s.`,
+        error: `Rate limit reached for this IP. Try again in ${Math.ceil(limitState.retryAfterMs / 1000 / 60)}hrs.`,
       });
     }
 
@@ -261,7 +291,9 @@ function readJson(req) {
 }
 
 function getClientIp(req) {
-  const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  const forwarded = String(req.headers["x-forwarded-for"] || "")
+    .split(",")[0]
+    .trim();
   return forwarded || req.socket.remoteAddress || "unknown";
 }
 
@@ -295,6 +327,11 @@ function setCachedResponse(cacheKey, value) {
 function consumeRateLimit(ip) {
   pruneMaps();
   const now = Date.now();
+
+  if (RATE_LIMIT_MAX_REQUESTS <= 0) {
+    return { allowed: false, remaining: 0, retryAfterMs: RATE_LIMIT_WINDOW_MS };
+  }
+
   const entry = requestUsage.get(ip);
 
   if (!entry || now >= entry.expiresAt) {
@@ -302,16 +339,28 @@ function consumeRateLimit(ip) {
       count: 1,
       expiresAt: now + RATE_LIMIT_WINDOW_MS,
     });
-    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1, retryAfterMs: RATE_LIMIT_WINDOW_MS };
+    return {
+      allowed: true,
+      remaining: RATE_LIMIT_MAX_REQUESTS - 1,
+      retryAfterMs: RATE_LIMIT_WINDOW_MS,
+    };
   }
 
   if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
-    return { allowed: false, remaining: 0, retryAfterMs: entry.expiresAt - now };
+    return {
+      allowed: false,
+      remaining: 0,
+      retryAfterMs: entry.expiresAt - now,
+    };
   }
 
   entry.count += 1;
   requestUsage.set(ip, entry);
-  return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - entry.count, retryAfterMs: entry.expiresAt - now };
+  return {
+    allowed: true,
+    remaining: RATE_LIMIT_MAX_REQUESTS - entry.count,
+    retryAfterMs: entry.expiresAt - now,
+  };
 }
 
 function pruneMaps() {
@@ -331,7 +380,9 @@ function pruneMaps() {
 }
 
 async function callModelJson(systemPrompt, userPrompt) {
-  const text = await callModelText(systemPrompt, userPrompt, { temperature: 0.8 });
+  const text = await callModelText(systemPrompt, userPrompt, {
+    temperature: 0.8,
+  });
   return safeJsonParse(text);
 }
 
@@ -383,19 +434,25 @@ async function callModelText(systemPrompt, userPrompt, options = {}) {
           continue;
         }
 
-        throw new Error(`Gemini API error on key ${keyIndex + 1}, model ${modelName}: ${message}`);
+        throw new Error(
+          `Gemini API error on key ${keyIndex + 1}, model ${modelName}: ${message}`,
+        );
       }
     }
   }
 
-  const quotaFailures = failures.filter((failure) => isGeminiQuotaError({ message: failure.message }));
+  const quotaFailures = failures.filter((failure) =>
+    isGeminiQuotaError({ message: failure.message }),
+  );
   if (quotaFailures.length) {
     throw new Error(
       `Gemini quota exceeded across configured keys/models. Tried ${GEMINI_KEYS.length} key(s) and models: ${modelsToTry.join(", ")}. ${extractRetryHint(quotaFailures[0].message)}`,
     );
   }
 
-  throw new Error(`Gemini failed across configured keys/models. Tried ${GEMINI_KEYS.length} key(s) and models: ${modelsToTry.join(", ")}.`);
+  throw new Error(
+    `Gemini failed across configured keys/models. Tried ${GEMINI_KEYS.length} key(s) and models: ${modelsToTry.join(", ")}.`,
+  );
 }
 
 async function enrichMovieList(items) {
@@ -405,7 +462,10 @@ async function enrichMovieList(items) {
 
   const enriched = await Promise.all(
     items.map(async (item) => {
-      const base = item && typeof item === "object" ? { ...item } : { title: String(item || "") };
+      const base =
+        item && typeof item === "object"
+          ? { ...item }
+          : { title: String(item || "") };
       if (!WATCHMODE_API_KEY || !base.title) {
         return addFallbackWatchmodeFields(base);
       }
@@ -418,7 +478,9 @@ async function enrichMovieList(items) {
 
         const details = await getWatchmodeTitleDetails(search.id);
         const streamingPlatforms = extractPlatforms(details);
-        const watchLink = streamingPlatforms.length ? pickWatchLink(details) : "";
+        const watchLink = streamingPlatforms.length
+          ? pickWatchLink(details)
+          : "";
 
         return {
           ...base,
@@ -427,7 +489,12 @@ async function enrichMovieList(items) {
           streamingPlatforms,
           watchLink,
           watchRegion: WATCHMODE_REGION,
-          watchStatus: watchLink && streamingPlatforms.length ? "Watch now" : streamingPlatforms.length ? "Available to stream" : "No streaming platforms found",
+          watchStatus:
+            watchLink && streamingPlatforms.length
+              ? "Watch now"
+              : streamingPlatforms.length
+                ? "Available to stream"
+                : "No streaming platforms found",
         };
       } catch {
         return addFallbackWatchmodeFields(base);
@@ -439,7 +506,9 @@ async function enrichMovieList(items) {
 }
 
 function addFallbackWatchmodeFields(item) {
-  const streamingPlatforms = Array.isArray(item.streamingPlatforms) ? item.streamingPlatforms : [];
+  const streamingPlatforms = Array.isArray(item.streamingPlatforms)
+    ? item.streamingPlatforms
+    : [];
   const watchLink = streamingPlatforms.length ? item.watchLink || "" : "";
   return {
     ...item,
@@ -447,7 +516,12 @@ function addFallbackWatchmodeFields(item) {
     streamingPlatforms,
     watchLink,
     watchRegion: WATCHMODE_REGION,
-    watchStatus: watchLink && streamingPlatforms.length ? "Watch now" : streamingPlatforms.length ? "Available to stream" : "No streaming platforms found",
+    watchStatus:
+      watchLink && streamingPlatforms.length
+        ? "Watch now"
+        : streamingPlatforms.length
+          ? "Available to stream"
+          : "No streaming platforms found",
   };
 }
 
@@ -472,15 +546,24 @@ async function searchWatchmodeTitle(title, year) {
 
   const normalizedYear = normalizeYear(year);
   const exactMatch = candidates.find((candidate) => {
-    const candidateYear = normalizeYear(candidate.year || candidate.release_year);
-    return normalizeTitle(candidate.name || candidate.title) === normalizeTitle(title) && (!normalizedYear || candidateYear === normalizedYear);
+    const candidateYear = normalizeYear(
+      candidate.year || candidate.release_year,
+    );
+    return (
+      normalizeTitle(candidate.name || candidate.title) ===
+        normalizeTitle(title) &&
+      (!normalizedYear || candidateYear === normalizedYear)
+    );
   });
 
   return exactMatch || candidates[0] || null;
 }
 
 async function getWatchmodeTitleDetails(id) {
-  const params = new URLSearchParams({ apiKey: WATCHMODE_API_KEY, append_to_response: "sources" });
+  const params = new URLSearchParams({
+    apiKey: WATCHMODE_API_KEY,
+    append_to_response: "sources",
+  });
   return fetchWatchmodeJson(`/title/${id}/details/?${params.toString()}`);
 }
 
@@ -489,7 +572,9 @@ async function fetchWatchmodeJson(pathname) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data?.message || data?.error || "Watchmode request failed.");
+    throw new Error(
+      data?.message || data?.error || "Watchmode request failed.",
+    );
   }
 
   return data;
@@ -500,7 +585,10 @@ function extractPlatforms(details) {
   const allowedTypes = new Set(["sub", "free"]);
   const regionSources = sources.filter((source) => {
     const region = String(source.region || source.country || "").toUpperCase();
-    return (!region || region === WATCHMODE_REGION) && (!source.type || allowedTypes.has(String(source.type).toLowerCase()));
+    return (
+      (!region || region === WATCHMODE_REGION) &&
+      (!source.type || allowedTypes.has(String(source.type).toLowerCase()))
+    );
   });
 
   const names = regionSources
@@ -513,24 +601,35 @@ function extractPlatforms(details) {
 
 function pickWatchLink(details) {
   const sources = Array.isArray(details.sources) ? details.sources : [];
-  const source = sources.find((entry) => {
-    const region = String(entry.region || entry.country || "").toUpperCase();
-    const type = String(entry.type || "").toLowerCase();
-    return region === WATCHMODE_REGION && (type === "sub" || type === "free");
-  }) || sources.find((entry) => {
-    const type = String(entry.type || "").toLowerCase();
-    return type === "sub" || type === "free";
-  });
+  const source =
+    sources.find((entry) => {
+      const region = String(entry.region || entry.country || "").toUpperCase();
+      const type = String(entry.type || "").toLowerCase();
+      return region === WATCHMODE_REGION && (type === "sub" || type === "free");
+    }) ||
+    sources.find((entry) => {
+      const type = String(entry.type || "").toLowerCase();
+      return type === "sub" || type === "free";
+    });
 
   return source?.web_url || source?.url || "";
 }
 
 function pickPoster(details) {
-  return details.poster || details.poster_url || details.poster_240x342 || details.poster_360x540 || "";
+  return (
+    details.poster ||
+    details.poster_url ||
+    details.poster_240x342 ||
+    details.poster_360x540 ||
+    ""
+  );
 }
 
 function normalizeTitle(value) {
-  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 function normalizeYear(value) {
@@ -588,7 +687,11 @@ function extractRetryHint(message) {
 }
 
 function safeJsonParse(text) {
-  const cleaned = text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+  const cleaned = text
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```$/i, "")
+    .trim();
   try {
     return JSON.parse(cleaned);
   } catch {
@@ -597,7 +700,10 @@ function safeJsonParse(text) {
 }
 
 function serveStatic(req, res, requestUrl) {
-  let filePath = path.join(PUBLIC_DIR, requestUrl.pathname === "/" ? "index.html" : requestUrl.pathname);
+  let filePath = path.join(
+    PUBLIC_DIR,
+    requestUrl.pathname === "/" ? "index.html" : requestUrl.pathname,
+  );
 
   if (!filePath.startsWith(PUBLIC_DIR)) {
     return sendText(res, 403, "Forbidden");
@@ -614,14 +720,18 @@ function serveStatic(req, res, requestUrl) {
       }
 
       const ext = path.extname(filePath).toLowerCase();
-      res.writeHead(200, { "Content-Type": MIME_TYPES[ext] || "application/octet-stream" });
+      res.writeHead(200, {
+        "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
+      });
       res.end(content);
     });
   });
 }
 
 function sendJson(res, statusCode, payload) {
-  res.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
+  res.writeHead(statusCode, {
+    "Content-Type": "application/json; charset=utf-8",
+  });
   res.end(JSON.stringify(payload));
 }
 
