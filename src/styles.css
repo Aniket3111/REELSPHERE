@@ -997,11 +997,30 @@ button:active {
   }
 
   .tool-navbar {
-    position: static;
+    position: sticky;
+    top: 10px;
+    gap: 14px;
+  }
+
+  .tool-navbar-copy p {
+    display: none;
+  }
+
+  .tool-navbar-links {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 10px;
+    margin: 0 -4px;
+    padding: 2px 4px 6px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
   }
 
   .tool-nav-link {
-    min-width: 100%;
+    min-width: min(220px, 72vw);
+    flex: 0 0 auto;
+    scroll-snap-align: start;
   }
 
   .hero-copy h1 {
