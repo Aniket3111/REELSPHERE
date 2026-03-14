@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const initialChatMessages = [
   {
@@ -372,17 +372,76 @@ export default function App() {
 }
 
 function ToolNavbar({ movieOfDayState }) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileNav, setIsMobileNav] = useState(false);
+  const navbarRef = useRef(null);
+  const navbarHomeRef = useRef(null);
   const movieReady = movieOfDayState.status === "ready";
   const featuredTitle = movieReady ? movieOfDayState.data?.title || "Daily pick" : "Loading daily pick";
+  const collapsed = isMobileNav && isCollapsed;
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 640px)");
+    const syncNavbarMode = () => {
+      const nextIsMobile = mediaQuery.matches;
+      setIsMobileNav(nextIsMobile);
+      if (!nextIsMobile) {
+        setIsCollapsed(false);
+      }
+    };
+
+    syncNavbarMode();
+    mediaQuery.addEventListener("change", syncNavbarMode);
+    return () => mediaQuery.removeEventListener("change", syncNavbarMode);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileNav || !navbarHomeRef.current) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setIsCollapsed(false);
+        }
+      },
+      {
+        root: null,
+        threshold: 0.6,
+      },
+    );
+
+    observer.observe(navbarHomeRef.current);
+    return () => observer.disconnect();
+  }, [isMobileNav]);
 
   return (
-    <nav className="tool-navbar reveal is-visible" aria-label="Tool navigation" data-reveal>
-      <div className="tool-navbar-copy">
-        <span className="tool-navbar-label">Explore</span>
-        <strong>Jump between the daily spotlight and every tool.</strong>
-        <p>{movieReady ? `${featuredTitle} is live in Movie of the Day.` : "Movie of the Day is loading alongside the core tools."}</p>
+    <>
+      <div ref={navbarHomeRef} className="tool-navbar-home" aria-hidden="true"></div>
+      <nav
+        ref={navbarRef}
+      className={`tool-navbar reveal is-visible ${collapsed ? "is-collapsed" : ""}`}
+      aria-label="Tool navigation"
+      data-reveal
+    >
+      <div className="tool-navbar-head">
+        <div className="tool-navbar-copy">
+          <span className="tool-navbar-label">Explore</span>
+          <strong>Jump between the daily spotlight and every tool.</strong>
+          <p>{movieReady ? `${featuredTitle} is live in Movie of the Day.` : "Movie of the Day is loading alongside the core tools."}</p>
+        </div>
+        <button
+          type="button"
+          className="tool-navbar-toggle"
+          onClick={() => setIsCollapsed((current) => !current)}
+          aria-expanded={!collapsed}
+          aria-controls="tool-navbar-links"
+        >
+          {collapsed ? "Open" : "Hide tools"}
+        </button>
       </div>
-      <div className="tool-navbar-links">
+      <div id="tool-navbar-links" className="tool-navbar-links" hidden={collapsed}>
         {TOOL_NAV_ITEMS.map((item) => (
           <a key={item.id} className={`tool-nav-link`} href={`#${item.id}`}>
             <span className="tool-nav-index">{item.index}</span>
@@ -394,6 +453,7 @@ function ToolNavbar({ movieOfDayState }) {
         ))}
       </div>
     </nav>
+  </>
   );
 }
 
