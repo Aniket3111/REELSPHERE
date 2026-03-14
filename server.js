@@ -336,6 +336,17 @@ async function handleJsonEndpoint(req, res, routeKey, handler) {
     return sendJson(res, 200, { ...result, cached: false });
   } catch (error) {
     console.error(error);
+
+    if (routeKey !== "/api/chat" && isGeminiQuotaError(error)) {
+      const fallback = await createRateLimitFallback(routeKey);
+      return sendJson(res, 200, {
+        ...fallback,
+        cached: false,
+        fallback: true,
+        limited: true,
+      });
+    }
+
     return sendJson(res, 500, {
       error: error.message || "Request failed.",
     });
