@@ -8,6 +8,14 @@ const initialChatMessages = [
   },
 ];
 
+const TOOL_NAV_ITEMS = [
+  { id: "movie-of-day", index: "00", label: "Movie of the Day", description: "Daily spotlight pick" },
+  { id: "search-tool", index: "01", label: "Natural Search", description: "Mood-led discovery" },
+  { id: "recommendations-tool", index: "02", label: "Recommendations", description: "Pattern-based picks" },
+  { id: "film-brain-tool", index: "03", label: "Film Brain", description: "Conversation mode" },
+  { id: "taste-decoder-tool", index: "04", label: "Taste Decoder", description: "Profile your taste" },
+];
+
 export default function App() {
   const [movieOfDayState, setMovieOfDayState] = useState({
     status: "loading",
@@ -60,7 +68,11 @@ export default function App() {
   async function loadMovieOfDay() {
     try {
       const body = await fetchJson("/api/movie-of-day", { method: "GET" });
-      setMovieOfDayState({ status: "ready", data: body.data, error: "" });
+      setMovieOfDayState({
+        status: "ready",
+        data: { ...body.data, notice: body.notice || "", limited: Boolean(body.limited) },
+        error: "",
+      });
     } catch (error) {
       setMovieOfDayState({
         status: "error",
@@ -172,7 +184,7 @@ export default function App() {
               <p className="eyebrow">ReelSphere</p>
               <span className="nav-subtitle">AI cinema discovery engine</span>
             </div>
-            <div className="nav-pill">4 live tools</div>
+            <div className="nav-pill">5 featured stops</div>
           </div>
 
           <div className="hero-main">
@@ -186,6 +198,7 @@ export default function App() {
               <div className="hero-actions">
                 <span className="hero-chip">Natural search</span>
                 <span className="hero-chip">Taste decoder</span>
+                <span className="hero-chip">Movie of the day</span>
                 <span className="hero-chip">Gemini powered</span>
               </div>
             </div>
@@ -244,11 +257,13 @@ export default function App() {
           </div>
         </header>
 
+        <ToolNavbar movieOfDayState={movieOfDayState} />
         <RuntimeBanner runtimeState={runtimeState} />
-        <MovieOfDaySection movieOfDayState={movieOfDayState} />
 
-        <main className="grid">
-          <section className="panel panel-search reveal" data-reveal>
+        <main className="grid tool-grid">
+          <MovieOfDaySection movieOfDayState={movieOfDayState} />
+
+          <section id="search-tool" className="panel panel-search reveal" data-reveal>
             <PanelMedia image="/natural_search.jpg" alt="Natural search visual" />
             <PanelHeader
               index="01"
@@ -269,7 +284,7 @@ export default function App() {
             </ResultArea>
           </section>
 
-          <section className="panel panel-recs reveal" data-reveal>
+          <section id="recommendations-tool" className="panel panel-recs reveal" data-reveal>
             <PanelMedia image="/recommendation.jpg" alt="Recommendation visual" />
             <PanelHeader
               index="02"
@@ -292,7 +307,7 @@ export default function App() {
             </ResultArea>
           </section>
 
-          <section className="panel panel-chat reveal" data-reveal>
+          <section id="film-brain-tool" className="panel panel-chat reveal" data-reveal>
             <PanelMedia
               image="/film_brain.jpg"
               alt="Film brain visual"
@@ -327,7 +342,7 @@ export default function App() {
             </form>
           </section>
 
-          <section className="panel panel-analyzer reveal" data-reveal>
+          <section id="taste-decoder-tool" className="panel panel-analyzer reveal" data-reveal>
             <PanelMedia image="/taste_decoder.jpg" alt="Taste decoder visual" />
             <PanelHeader
               index="04"
@@ -356,9 +371,35 @@ export default function App() {
   );
 }
 
+function ToolNavbar({ movieOfDayState }) {
+  const movieReady = movieOfDayState.status === "ready";
+  const featuredTitle = movieReady ? movieOfDayState.data?.title || "Daily pick" : "Loading daily pick";
+
+  return (
+    <nav className="tool-navbar reveal is-visible" aria-label="Tool navigation" data-reveal>
+      <div className="tool-navbar-copy">
+        <span className="tool-navbar-label">Explore</span>
+        <strong>Jump between the daily spotlight and every tool.</strong>
+        <p>{movieReady ? `${featuredTitle} is live in Movie of the Day.` : "Movie of the Day is loading alongside the core tools."}</p>
+      </div>
+      <div className="tool-navbar-links">
+        {TOOL_NAV_ITEMS.map((item) => (
+          <a key={item.id} className={`tool-nav-link`} href={`#${item.id}`}>
+            <span className="tool-nav-index">{item.index}</span>
+            <span className="tool-nav-text">
+              <strong>{item.label}</strong>
+              <span>{item.description}</span>
+            </span>
+          </a>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
 function MovieOfDaySection({ movieOfDayState }) {
   return (
-    <section className="movie-of-day reveal" data-reveal>
+    <section id="movie-of-day" className="movie-of-day movie-of-day-full reveal" data-reveal>
       <div className="movie-of-day-copy">
         <span className="movie-of-day-kicker">Movie of the Day</span>
         {movieOfDayState.status === "loading" ? (
@@ -402,6 +443,7 @@ function MovieOfDayFeature({ item }) {
       </div>
 
       <div className="movie-of-day-body">
+        {item?.notice ? <FallbackNotice message={item.notice} /> : null}
         <div className="movie-of-day-heading">
           <div className="movie-of-day-topline">
             <span className="tile-year">{item?.year || "?"}</span>

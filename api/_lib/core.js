@@ -146,18 +146,17 @@ async function handleApiRequest(req, res, routeKey, handler) {
     const ip = getClientIp(req);
     const limitState = consumeRateLimit(ip, config.rateLimitMaxRequests, config.rateLimitWindowMs);
     if (!limitState.allowed) {
-      if (routeKey !== "/api/chat") {
-        const fallback = await createRateLimitFallback(routeKey, config);
-        return sendJson(res, 200, {
-          ...fallback,
-          cached: false,
-          fallback: true,
-          limited: true,
-        });
-      }
+      const fallback = await createRateLimitFallback(routeKey, config);
+      if (routeKey === "/api/chat") {
+        fallback.data.answer = `${fallback.data.answer}
 
-      return sendJson(res, 429, {
-        error: `Rate limit reached for this IP. Try again in ${Math.ceil(limitState.retryAfterMs / 1000 / 60)}hrs.`,
+Retry in about ${Math.ceil(limitState.retryAfterMs / 1000 / 60)} hour(s).`;
+      }
+      return sendJson(res, 200, {
+        ...fallback,
+        cached: false,
+        fallback: true,
+        limited: true,
       });
     }
 
@@ -167,7 +166,7 @@ async function handleApiRequest(req, res, routeKey, handler) {
   } catch (error) {
     console.error(error);
 
-    if (routeKey !== "/api/chat" && isGeminiQuotaError(error)) {
+    if (isGeminiQuotaError(error)) {
       const fallback = await createRateLimitFallback(routeKey, config);
       return sendJson(res, 200, {
         ...fallback,
@@ -236,6 +235,22 @@ async function createRateLimitFallback(routeKey, config) {
     };
   }
 
+  if (routeKey === "/api/movie-of-day") {
+    return {
+      data: createMovieOfDayFallback(picks[0], message),
+      notice: message,
+    };
+  }
+
+  if (routeKey === "/api/chat") {
+    return {
+      data: {
+        answer: createChatFallbackAnswer(picks, message),
+      },
+      notice: message,
+    };
+  }
+
   return {
     data: { items: picks },
     notice: message,
@@ -252,12 +267,16 @@ async function buildFallbackMovies(config) {
 
 async function handleMovieOfDayRequest(req, res) {
   const config = getConfig();
+  const fallbackResponse = async () => createRateLimitFallback("/api/movie-of-day", config);
 
   try {
     if (!config.geminiKeys.length) {
-      return sendJson(res, 500, {
-        error:
-          "No Gemini API keys are configured. Set GEMINI_API_KEY in your environment variables.",
+      const fallback = await fallbackResponse();
+      return sendJson(res, 200, {
+        ...fallback,
+        cached: false,
+        fallback: true,
+        limited: true,
       });
     }
 
@@ -273,11 +292,20 @@ async function handleMovieOfDayRequest(req, res) {
     const prompt = `Date: ${new Date().toISOString().slice(0, 10)}\nRegion: ${config.watchmodeRegion}\nSelect a movie of the day for a modern streaming dashboard audience.`;
     const data = await callModelJson(SYSTEM_PROMPTS.movieOfDay, prompt, config);
     const [movie] = await enrichMovieList([data], config);
-    const result = { data: movie || data };
+    const result = { data: movie || data, notice: "" };
     setCachedResponse(cacheKey, result, 24 * 60 * 60 * 1000);
     return sendJson(res, 200, { ...result, cached: false });
   } catch (error) {
     console.error(error);
+    if (isGeminiQuotaError(error)) {
+      const fallback = await fallbackResponse();
+      return sendJson(res, 200, {
+        ...fallback,
+        cached: false,
+        fallback: true,
+        limited: true,
+      });
+    }
     return sendJson(res, 500, { error: error.message || "Request failed." });
   }
 }
@@ -774,6 +802,45 @@ function safeJsonParse(text) {
   } catch {
     throw new Error("The model returned invalid JSON. Try again.");
   }
+}
+
+function createMovieOfDayFallback(item, message) {
+  const fallback = item || {};
+  const title = fallback.title || "Movie Pick";
+  const year = fallback.year || "";
+  const tone = Array.isArray(fallback.tone) ? fallback.tone : [];
+  const vibe = Array.isArray(fallback.vibe) ? fallback.vibe : [];
+  const genres = Array.isArray(fallback.genres) ? fallback.genres : [];
+
+  return {
+    ...fallback,
+    title,
+    year,
+    hook: fallback.hook || fallback.blurb || "A reliable fallback pick while AI responses are limited.",
+    overview:
+      fallback.overview ||
+      `${title}${year ? ` (${year})` : ""} stays in rotation because it delivers quickly and still feels worth your time.`,
+    whyToday:
+      fallback.whyToday ||
+      `${message} ${title} is a strong backup because it is broadly liked and easy to slot into most moods.`,
+    highlights:
+      Array.isArray(fallback.highlights) && fallback.highlights.length
+        ? fallback.highlights
+        : [...tone, ...genres].slice(0, 3),
+    vibe,
+  };
+}
+
+function createChatFallbackAnswer(picks, message) {
+  const lines = picks.slice(0, 3).map((item) => {
+    const platforms =
+      Array.isArray(item.streamingPlatforms) && item.streamingPlatforms.length
+        ? ` Stream on ${item.streamingPlatforms.slice(0, 3).join(", ")}.`
+        : "";
+    return `- ${item.title} (${item.year || "?"}): ${item.blurb || "Solid fallback pick."}${platforms}`;
+  });
+
+  return [message, "", "Quick fallback picks:", ...lines].join("\n");
 }
 
 function sendJson(res, statusCode, payload) {
