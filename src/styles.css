@@ -1007,3 +1007,202 @@ button:active {
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }
+
+.movie-of-day {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 18px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgba(229, 9, 20, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    rgba(17, 17, 17, 0.9);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+
+.movie-of-day::after {
+  content: "";
+  position: absolute;
+  inset: auto -8% -26% auto;
+  width: 360px;
+  height: 360px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 120, 79, 0.16), transparent 68%);
+  pointer-events: none;
+}
+
+.movie-of-day-copy {
+  position: relative;
+  z-index: 1;
+}
+
+.movie-of-day-kicker {
+  display: inline-flex;
+  margin-bottom: 16px;
+  color: #ffb39a;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+}
+
+.movie-of-day-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 22px;
+  align-items: stretch;
+}
+
+.movie-of-day-poster-shell .tile-poster {
+  height: 100%;
+  min-height: 420px;
+  margin: 0;
+  border-radius: 22px;
+}
+
+.movie-of-day-poster-shell .tile-poster img {
+  transform: scale(1.02);
+}
+
+.movie-of-day-body {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.movie-of-day-heading h2 {
+  margin: 10px 0 0;
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  line-height: 0.94;
+  letter-spacing: -0.04em;
+}
+
+.movie-of-day-topline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.movie-of-day-hook {
+  margin: 12px 0 0;
+  color: #f4d7cf;
+  font-size: 1.02rem;
+  line-height: 1.6;
+}
+
+.movie-of-day-overview {
+  margin: 0;
+  color: #ddd;
+  line-height: 1.7;
+  font-size: 0.98rem;
+  max-width: 70ch;
+}
+
+.movie-of-day-why {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.movie-of-day-why span {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+}
+
+.movie-of-day-why p {
+  margin: 0;
+  color: #f0f0f0;
+  line-height: 1.6;
+}
+
+.movie-of-day-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.movie-of-day-highlight {
+  min-height: 78px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #f2f2f2;
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+.movie-of-day-meta {
+  margin: 0;
+}
+
+.movie-of-day-streaming {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: end;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.movie-of-day-streaming-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.movie-of-day-streaming-empty {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.movie-of-day-actions {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+@media (max-width: 960px) {
+  .movie-of-day-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .movie-of-day-poster-shell .tile-poster {
+    min-height: 340px;
+  }
+
+  .movie-of-day-highlights {
+    grid-template-columns: 1fr;
+  }
+
+  .movie-of-day-streaming {
+    grid-template-columns: 1fr;
+    display: grid;
+    align-items: start;
+  }
+
+  .movie-of-day-actions {
+    justify-items: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .movie-of-day {
+    padding: 18px;
+  }
+
+  .movie-of-day-heading h2 {
+    font-size: 2.5rem;
+  }
+
+  .movie-of-day-poster-shell .tile-poster {
+    min-height: 280px;
+  }
+}

@@ -1,6 +1,6 @@
-# AI Movie Explorer
+# ReelSphere
 
-AI Movie Explorer is a lightweight Node app with four AI-powered movie workflows:
+ReelSphere is a React frontend with a lightweight Node API backend for four AI-powered movie workflows:
 
 - Natural language movie search
 - Movie recommendations
@@ -51,17 +51,33 @@ CACHE_TTL_MS=21600000
 
 ## Run
 
+Development mode runs both the Node API server and the React client:
+
 ```bash
 npm run dev
 ```
 
-Or start without watch mode:
+This starts:
+
+- Node API on `http://localhost:3000`
+- React client on `http://localhost:5173`
+
+Production build:
 
 ```bash
+npm run build
 npm start
 ```
 
-Then open `http://localhost:3000`.
+In production, the Node server serves the built React app from `dist/`.
+
+API-only server:
+
+```bash
+npm run dev:server
+```
+
+Then open `http://localhost:5173` for development or `http://localhost:3000` after a production build.
 
 ## Notes
 

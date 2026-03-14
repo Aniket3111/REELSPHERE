@@ -29,7 +29,7 @@ const RATE_LIMIT_WINDOW_MS = Number(
   process.env.RATE_LIMIT_WINDOW_MS || 60 * 60 * 1000,
 );
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_MS || 6 * 60 * 60 * 1000);
-const PUBLIC_DIR = path.join(__dirname, "public");
+const DIST_DIR = path.join(__dirname, "dist");
 
 const requestUsage = new Map();
 const responseCache = new Map();
@@ -49,6 +49,22 @@ const MIME_TYPES = {
 };
 
 const SYSTEM_PROMPTS = {
+  movieOfDay: `You are a film curator selecting one "movie of the day".
+Return valid JSON only with this shape:
+{
+  "title": "string",
+  "year": "string",
+  "hook": "short punchy one-liner",
+  "overview": "2 to 3 sentences about what makes it worth watching",
+  "whyToday": "1 sentence explaining why this is today's pick",
+  "highlights": ["string", "string", "string"],
+  "vibe": ["string", "string", "string"]
+}
+Rules:
+- Pick one real, well-known movie.
+- Vary the selection across eras and styles.
+- Keep every field concise and specific.
+- Do not include markdown fences.`,
   search: `You are a film discovery engine. Convert a natural language movie search request into a concise JSON object.
 Return valid JSON only with this shape:
 {
@@ -168,6 +184,38 @@ const server = http.createServer(async (req, res) => {
         const answer = await callModelText(SYSTEM_PROMPTS.chat, transcript);
         return { data: { answer } };
       });
+    }
+
+    if (req.method === "GET" && requestUrl.pathname === "/api/movie-of-day") {
+      if (!GEMINI_KEYS.length) {
+        return sendJson(res, 500, {
+          error:
+            "No Gemini API keys are configured. Set GEMINI_API_KEY in your .env file.",
+        });
+      }
+
+      const cacheKey = createCacheKey("/api/movie-of-day", {
+        day: getDailyCacheBucket(),
+        region: WATCHMODE_REGION,
+      });
+      const cached = getCachedResponse(cacheKey);
+      if (cached) {
+        return sendJson(res, 200, { ...cached, cached: true });
+      }
+
+      try {
+        const prompt = `Date: ${new Date().toISOString().slice(0, 10)}\nRegion: ${WATCHMODE_REGION}\nSelect a movie of the day for a modern streaming dashboard audience.`;
+        const data = await callModelJson(SYSTEM_PROMPTS.movieOfDay, prompt);
+        const [movie] = await enrichMovieList([data]);
+        const result = { data: movie || data };
+        setCachedResponse(cacheKey, result, 24 * 60 * 60 * 1000);
+        return sendJson(res, 200, { ...result, cached: false });
+      } catch (error) {
+        console.error(error);
+        return sendJson(res, 500, {
+          error: error.message || "Request failed.",
+        });
+      }
     }
 
     if (req.method === "GET" && requestUrl.pathname === "/api/health") {
@@ -317,11 +365,15 @@ function getCachedResponse(cacheKey) {
   return entry.value;
 }
 
-function setCachedResponse(cacheKey, value) {
+function setCachedResponse(cacheKey, value, ttlMs = CACHE_TTL_MS) {
   responseCache.set(cacheKey, {
     value,
-    expiresAt: Date.now() + CACHE_TTL_MS,
+    expiresAt: Date.now() + ttlMs,
   });
+}
+
+function getDailyCacheBucket() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function consumeRateLimit(ip) {
@@ -700,12 +752,20 @@ function safeJsonParse(text) {
 }
 
 function serveStatic(req, res, requestUrl) {
+  if (!fs.existsSync(DIST_DIR)) {
+    return sendText(
+      res,
+      503,
+      "Frontend build not found. Run `npm run build` for production or use `npm run dev` for development.",
+    );
+  }
+
   let filePath = path.join(
-    PUBLIC_DIR,
+    DIST_DIR,
     requestUrl.pathname === "/" ? "index.html" : requestUrl.pathname,
   );
 
-  if (!filePath.startsWith(PUBLIC_DIR)) {
+  if (!filePath.startsWith(DIST_DIR)) {
     return sendText(res, 403, "Forbidden");
   }
 
@@ -716,7 +776,22 @@ function serveStatic(req, res, requestUrl) {
 
     fs.readFile(filePath, (readError, content) => {
       if (readError) {
-        return sendText(res, 404, "Not found");
+        const hasExtension = path.extname(requestUrl.pathname).length > 0;
+        if (hasExtension) {
+          return sendText(res, 404, "Not found");
+        }
+
+        const fallbackIndex = path.join(DIST_DIR, "index.html");
+        return fs.readFile(fallbackIndex, (indexError, indexContent) => {
+          if (indexError) {
+            return sendText(res, 404, "Not found");
+          }
+
+          res.writeHead(200, {
+            "Content-Type": MIME_TYPES[".html"],
+          });
+          res.end(indexContent);
+        });
       }
 
       const ext = path.extname(filePath).toLowerCase();
