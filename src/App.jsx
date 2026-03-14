@@ -80,7 +80,11 @@ export default function App() {
     setSearchState({ status: "loading", data: null, error: "" });
     try {
       const result = await postJson("/api/search", { query });
-      setSearchState({ status: "ready", data: result.data, error: "" });
+      setSearchState({
+        status: "ready",
+        data: { ...result.data, notice: result.notice || "", limited: Boolean(result.limited) },
+        error: "",
+      });
     } catch (error) {
       setSearchState({ status: "error", data: null, error: error.message });
     }
@@ -96,7 +100,11 @@ export default function App() {
     setRecommendState({ status: "loading", data: null, error: "" });
     try {
       const result = await postJson("/api/recommendations", { query });
-      setRecommendState({ status: "ready", data: result.data, error: "" });
+      setRecommendState({
+        status: "ready",
+        data: { ...result.data, notice: result.notice || "", limited: Boolean(result.limited) },
+        error: "",
+      });
     } catch (error) {
       setRecommendState({ status: "error", data: null, error: error.message });
     }
@@ -112,7 +120,11 @@ export default function App() {
     setAnalyzeState({ status: "loading", data: null, error: "" });
     try {
       const result = await postJson("/api/analyze-taste", { query });
-      setAnalyzeState({ status: "ready", data: result.data, error: "" });
+      setAnalyzeState({
+        status: "ready",
+        data: { ...result.data, notice: result.notice || "", limited: Boolean(result.limited) },
+        error: "",
+      });
     } catch (error) {
       setAnalyzeState({ status: "error", data: null, error: error.message });
     }
@@ -532,6 +544,10 @@ function ResultArea({ state, emptyText, children }) {
   );
 }
 
+function FallbackNotice({ message }) {
+  return <p className="fallback-note">{message}</p>;
+}
+
 function SearchResults({ data }) {
   const results = Array.isArray(data.results) ? data.results : [];
   return (
@@ -540,6 +556,7 @@ function SearchResults({ data }) {
         <p>
           <strong>{data.summary || "Search results"}</strong>
         </p>
+        {data.notice ? <FallbackNotice message={data.notice} /> : null}
       </div>
       <div className="result-rail">
         {results.map((item, index) => (
@@ -567,6 +584,7 @@ function RecommendationResults({ data }) {
         <p>
           <strong>{data.tasteRead || "Recommendation read"}</strong>
         </p>
+        {data.notice ? <FallbackNotice message={data.notice} /> : null}
       </div>
       <div className="result-rail">
         {recommendations.map((item, index) => (
@@ -589,6 +607,7 @@ function AnalysisResults({ data }) {
 
   return (
     <>
+      {data.notice ? <FallbackNotice message={data.notice} /> : null}
       <article className="result-card">
         <h3>{data.profileName || "Taste profile"}</h3>
         <p>{data.overview || ""}</p>

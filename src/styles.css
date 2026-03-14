@@ -827,6 +827,32 @@ button:active {
   }
 }
 
+@media (max-width: 768px) {
+  .result-area,
+  .panel,
+  .panel-header,
+  .section-lead {
+    min-width: 0;
+  }
+
+  .result-rail {
+    display: grid;
+    grid-auto-flow: row;
+    grid-auto-columns: unset;
+    grid-template-columns: minmax(0, 1fr);
+    overflow-x: visible;
+    overflow-y: visible;
+    padding-bottom: 0;
+    scroll-snap-type: none;
+  }
+
+  .result-tile {
+    width: 100%;
+    min-width: 0;
+    scroll-snap-align: none;
+  }
+}
+
 @media (max-width: 640px) {
   .page-shell {
     width: min(100% - 20px, 1240px);
@@ -1282,10 +1308,10 @@ button:active {
   }
 
   .result-rail {
-    grid-auto-columns: minmax(86vw, 86vw);
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
-    margin: 0 -2px;
-    padding: 0 2px 10px;
+    margin: 0;
+    padding: 0;
   }
 
   .result-tile {
@@ -1326,5 +1352,24 @@ button:active {
 
   .movie-of-day-actions .watch-link {
     width: 100%;
+  }
+}
+
+
+.fallback-note {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 123, 84, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 123, 84, 0.1);
+  color: #ffd3c7;
+  line-height: 1.55;
+  font-size: 0.9rem;
+}
+
+
+@media (max-width: 768px) {
+  .runtime-banner {
+    display: none;
   }
 }

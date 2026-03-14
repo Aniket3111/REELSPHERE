@@ -48,6 +48,21 @@ const MIME_TYPES = {
   ".ico": "image/x-icon",
 };
 
+const FALLBACK_LIBRARY = [
+  { title: "Inception", year: "2010", blurb: "High-concept suspense with precision set pieces.", genres: ["Sci-Fi", "Thriller"], tone: ["Sleek", "Mind-bending"], vibe: ["Cerebral", "Big-screen"] },
+  { title: "The Dark Knight", year: "2008", blurb: "Propulsive crime escalation with huge stakes.", genres: ["Crime", "Action"], tone: ["Tense", "Epic"], vibe: ["Dark", "Prestige"] },
+  { title: "Interstellar", year: "2014", blurb: "Emotion-forward science fiction with scale.", genres: ["Sci-Fi", "Drama"], tone: ["Expansive", "Emotional"], vibe: ["Cosmic", "Intense"] },
+  { title: "Zodiac", year: "2007", blurb: "Methodical obsession and procedural dread.", genres: ["Crime", "Mystery"], tone: ["Patient", "Uneasy"], vibe: ["Investigative", "Cold"] },
+  { title: "Blade Runner 2049", year: "2017", blurb: "Atmospheric futurism with meditative weight.", genres: ["Sci-Fi", "Neo-noir"], tone: ["Moody", "Elegant"], vibe: ["Slow-burn", "Visual"] },
+  { title: "Arrival", year: "2016", blurb: "Thoughtful science fiction built on emotion and ideas.", genres: ["Sci-Fi", "Drama"], tone: ["Reflective", "Intimate"], vibe: ["Smart", "Melancholic"] },
+  { title: "Heat", year: "1995", blurb: "A crime saga driven by professionalism and obsession.", genres: ["Crime", "Thriller"], tone: ["Controlled", "Urban"], vibe: ["Masculine", "Operatic"] },
+  { title: "Whiplash", year: "2014", blurb: "A pressure-cooker character duel with relentless pace.", genres: ["Drama", "Music"], tone: ["Aggressive", "Electric"], vibe: ["Driven", "Intense"] },
+  { title: "Mad Max: Fury Road", year: "2015", blurb: "Pure momentum with world-class action design.", genres: ["Action", "Adventure"], tone: ["Ferocious", "Kinetic"], vibe: ["Adrenaline", "Visual"] },
+  { title: "Parasite", year: "2019", blurb: "Sharp social tension that keeps shifting shape.", genres: ["Thriller", "Drama"], tone: ["Satirical", "Suspenseful"], vibe: ["Modern", "Unpredictable"] },
+  { title: "The Social Network", year: "2010", blurb: "Fast, precise dialogue with icy ambition underneath.", genres: ["Drama", "Biography"], tone: ["Sharp", "Cold"], vibe: ["Talky", "Prestige"] },
+  { title: "Spider-Man: Into the Spider-Verse", year: "2018", blurb: "Inventive animation with real energy and heart.", genres: ["Animation", "Action"], tone: ["Playful", "Bold"], vibe: ["Stylized", "Crowd-pleasing"] },
+];
+
 const SYSTEM_PROMPTS = {
   movieOfDay: `You are a film curator selecting one "movie of the day".
 Return valid JSON only with this shape:
@@ -301,6 +316,16 @@ async function handleJsonEndpoint(req, res, routeKey, handler) {
     const ip = getClientIp(req);
     const limitState = consumeRateLimit(ip);
     if (!limitState.allowed) {
+      if (routeKey !== "/api/chat") {
+        const fallback = await createRateLimitFallback(routeKey);
+        return sendJson(res, 200, {
+          ...fallback,
+          cached: false,
+          fallback: true,
+          limited: true,
+        });
+      }
+
       return sendJson(res, 429, {
         error: `Rate limit reached for this IP. Try again in ${Math.ceil(limitState.retryAfterMs / 1000 / 60)}hrs.`,
       });
@@ -315,6 +340,75 @@ async function handleJsonEndpoint(req, res, routeKey, handler) {
       error: error.message || "Request failed.",
     });
   }
+}
+
+async function createRateLimitFallback(routeKey) {
+  const picks = await buildFallbackMovies();
+  const message = "Sorry, your AI limit is reached right now. Showing a fallback movie list with streaming availability instead.";
+
+  if (routeKey === "/api/search") {
+    return {
+      data: {
+        summary: message,
+        results: picks.map((item) => ({
+          ...item,
+          whyItMatches: item.blurb,
+          genres: item.genres || [],
+          tone: item.tone || [],
+        })),
+      },
+      notice: message,
+    };
+  }
+
+  if (routeKey === "/api/recommendations") {
+    return {
+      data: {
+        tasteRead: message,
+        recommendations: picks.map((item) => ({
+          ...item,
+          reason: item.blurb,
+          vibe: item.vibe || [],
+        })),
+      },
+      notice: message,
+    };
+  }
+
+  if (routeKey === "/api/analyze-taste") {
+    return {
+      data: {
+        profileName: "Fallback Watchlist",
+        overview: message,
+        signals: [
+          { label: "AI Access", score: 0, explanation: "Daily limit reached for this IP." },
+          { label: "Fallback Depth", score: 72, explanation: "Showing a broad set of reliable films instead." },
+          { label: "Streaming Coverage", score: 68, explanation: "Watchmode data is still being used for provider availability." },
+          { label: "Discovery Value", score: 74, explanation: "The list is mixed across styles so you still have solid options." },
+        ],
+        comfortZone: ["Popular essentials", "High-signal picks"],
+        blindSpots: ["Custom AI analysis paused until the limit resets"],
+        nextPicks: picks.map((item) => ({
+          ...item,
+          why: item.blurb,
+        })),
+      },
+      notice: message,
+    };
+  }
+
+  return {
+    data: { items: picks },
+    notice: message,
+  };
+}
+
+async function buildFallbackMovies() {
+  const daySeed = Number(new Date().toISOString().slice(8, 10));
+  const offset = daySeed % FALLBACK_LIBRARY.length;
+  const rotated = FALLBACK_LIBRARY.slice(offset).concat(FALLBACK_LIBRARY.slice(0, offset));
+  const selected = rotated.slice(0, 6).map((item) => ({ ...item }));
+  return enrichMovieList(selected);
 }
 
 function readJson(req) {
