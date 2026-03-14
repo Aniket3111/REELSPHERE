@@ -1,42 +1,30 @@
 # ReelSphere
 
-ReelSphere is a React frontend with a lightweight Node API backend for four AI-powered movie workflows:
+ReelSphere is a React frontend with AI-powered movie discovery features backed by Gemini and Watchmode.
+
+## Features
 
 - Natural language movie search
 - Movie recommendations
-- Movie knowledge chat
-- AI taste analyzer
+- Film knowledge chat
+- Taste analyzer
+- Movie of the Day with streaming availability
 
 ## Requirements
 
-- Node.js 18.17+ for native `fetch`
+- Node.js 18.17+
 - At least one Google Gemini API key
 - Watchmode API key for posters and streaming-platform metadata
 
-## Setup
+## Environment Variables
 
-1. Get one or more Google Gemini API keys
-   - Go to [Google AI Studio](https://aistudio.google.com/)
-   - Create your primary key
-   - Optional: create additional keys from other projects for quota failover
-
-2. Get a Watchmode API key
-   - Go to [Watchmode API](https://api.watchmode.com/)
-   - Create a developer account and copy your API key
-
-3. Install dependencies
-
-```bash
-npm install
-```
-
-4. Configure environment
-   - Copy `.env.example` to `.env`
-   - Set:
+Set these in `.env` for local development and in Vercel Project Settings for deployment:
 
 ```env
 GEMINI_API_KEY=your_primary_gemini_api_key_here
 GEMINI_BACKUP_API_KEYS=your_second_gemini_api_key_here,your_third_gemini_api_key_here
+GEMINI_MODEL=gemini-2.5-flash-lite
+GEMINI_FALLBACK_MODELS=gemini-2.0-flash-lite,gemini-2.0-flash,gemini-1.5-flash
 WATCHMODE_API_KEY=your_watchmode_api_key_here
 WATCHMODE_REGION=IN
 RATE_LIMIT_MAX_REQUESTS=5
@@ -44,14 +32,15 @@ RATE_LIMIT_WINDOW_MS=3600000
 CACHE_TTL_MS=21600000
 ```
 
-   - Optional:
-     - `GEMINI_MODEL` default: `gemini-2.5-flash-lite`
-     - `GEMINI_FALLBACK_MODELS` for model failover per key
-     - `PORT`
+## Local Development
 
-## Run
+Install dependencies:
 
-Development mode runs both the Node API server and the React client:
+```bash
+npm install
+```
+
+Run the React client and local Node API together:
 
 ```bash
 npm run dev
@@ -59,31 +48,48 @@ npm run dev
 
 This starts:
 
-- Node API on `http://localhost:3000`
 - React client on `http://localhost:5173`
+- Local Node API on `http://localhost:3000`
 
-Production build:
+## Production Build
 
 ```bash
 npm run build
-npm start
 ```
 
-In production, the Node server serves the built React app from `dist/`.
+## Deploy To Vercel
 
-API-only server:
+This project is now Vercel-ready.
 
-```bash
-npm run dev:server
-```
+Vercel settings:
 
-Then open `http://localhost:5173` for development or `http://localhost:3000` after a production build.
+- Framework Preset: `Vite`
+- Root Directory: `./`
+- Build Command: `npm run build`
+- Output Directory: `dist`
+- Install Command: leave default
+
+Backend API routes are deployed from the root `api/` directory as Vercel Functions:
+
+- `/api/search`
+- `/api/recommendations`
+- `/api/analyze-taste`
+- `/api/chat`
+- `/api/movie-of-day`
+- `/api/health`
+
+### Deploy steps
+
+1. Push the repo to GitHub
+2. Import the repo into Vercel
+3. Choose `Vite` as the preset
+4. Add all environment variables from `.env`
+5. Deploy
 
 ## Notes
 
-- The backend rotates across configured Gemini models and backup API keys when quota/rate-limit errors occur
-- AI endpoints use per-IP rate limiting
-- Cached identical requests are served from memory and do not consume your Gemini quota again
-- Health output includes backup key counts, rate-limit settings, and cache configuration
-- When `WATCHMODE_API_KEY` is set, movie search and recommendation results are enriched with Watchmode posters and streaming providers
-- `WATCHMODE_REGION` controls which country streaming providers are shown, for example `IN` or `US`
+- On Vercel, the React app is built to `dist`
+- API routes run as serverless functions from `api/`
+- The in-memory cache and rate limit are best-effort only on Vercel because serverless instances are not persistent
+- For strict global rate limiting or persistent caching, use Redis or another external store
+- Movie search, recommendations, and the daily pick are enriched with Watchmode providers when `WATCHMODE_API_KEY` is configured
