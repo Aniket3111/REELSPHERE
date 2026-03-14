@@ -866,8 +866,14 @@ function normalizeArray(items) {
 
 function initRevealAnimations() {
   const nodes = document.querySelectorAll("[data-reveal]");
-  if (!("IntersectionObserver" in window)) {
-    nodes.forEach((node) => node.classList.add("is-visible"));
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const isCompactScreen = window.matchMedia("(max-width: 768px)").matches;
+
+  if (!("IntersectionObserver" in window) || reduceMotion || isCompactScreen) {
+    nodes.forEach((node) => {
+      node.style.transitionDelay = "0ms";
+      node.classList.add("is-visible");
+    });
     return;
   }
 
@@ -893,6 +899,15 @@ function initRevealAnimations() {
 }
 
 function initScrollScene() {
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const isCompactScreen = window.matchMedia("(max-width: 768px)").matches;
+
+  if (reduceMotion || isCompactScreen) {
+    document.body.style.setProperty("--scroll-progress", "0");
+    document.body.classList.remove("is-scrolled", "is-deep-scrolled");
+    return () => {};
+  }
+
   let ticking = false;
 
   const updateScene = () => {

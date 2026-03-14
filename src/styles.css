@@ -1206,3 +1206,125 @@ button:active {
     min-height: 280px;
   }
 }
+
+
+.reveal {
+  will-change: transform, opacity;
+}
+
+.result-tile,
+.movie-of-day-highlight,
+.signal-item,
+.chat-bubble {
+  min-width: 0;
+}
+
+@media (hover: none) {
+  .panel:hover {
+    transform: none;
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: var(--shadow);
+  }
+}
+
+@media (max-width: 960px) {
+  .ambient {
+    display: none;
+  }
+
+  .bg-video-shell,
+  .bg-video {
+    transform: none;
+  }
+
+  .hero,
+  .hero-spotlight,
+  .runtime-banner,
+  .panel,
+  .movie-of-day,
+  .chat-bubble {
+    backdrop-filter: none;
+  }
+
+  .runtime-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .movie-of-day-layout {
+    gap: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .hero-copy h1 {
+    max-width: 100%;
+    font-size: clamp(2.8rem, 13vw, 3.7rem);
+  }
+
+  .lede {
+    font-size: 0.94rem;
+  }
+
+  .runtime-banner {
+    gap: 14px;
+  }
+
+  .result-area,
+  .chat-thread {
+    margin-top: 16px;
+    padding-top: 14px;
+  }
+
+  .result-rail {
+    grid-auto-columns: minmax(86vw, 86vw);
+    gap: 12px;
+    margin: 0 -2px;
+    padding: 0 2px 10px;
+  }
+
+  .result-tile {
+    min-height: auto;
+    padding: 14px;
+  }
+
+  .tile-topline,
+  .movie-of-day-topline {
+    flex-wrap: wrap;
+  }
+
+  .tile-poster {
+    height: 160px;
+  }
+
+  .watch-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .watch-link {
+    width: 100%;
+  }
+
+  .movie-of-day-why,
+  .movie-of-day-highlight {
+    padding: 14px;
+  }
+
+  .movie-of-day-streaming {
+    gap: 14px;
+  }
+
+  .movie-of-day-actions {
+    width: 100%;
+  }
+
+  .movie-of-day-actions .watch-link {
+    width: 100%;
+  }
+}
