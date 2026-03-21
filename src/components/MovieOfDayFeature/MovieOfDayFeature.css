@@ -55,21 +55,42 @@
 /* ─── Movie of the Day — Card Layout ────────────────────────── */
 
 .movie-of-day-layout {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  gap: 32px;
-  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
 }
 
-.movie-of-day-poster-shell {
-  flex-shrink: 0;
+.movie-of-day-layout-backdrop {
+  position: relative;
+  isolation: isolate;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 18px;
 }
 
-.movie-of-day-poster-shell .tile-poster {
-  width: 200px;
-  height: 300px;
-  border-radius: 12px;
-  aspect-ratio: unset;
+.movie-of-day-layout-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--movie-of-day-poster);
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: right center;
+  opacity: 0.38;
+  filter: saturate(0.95);
+  z-index: -2;
+}
+
+.movie-of-day-layout-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(10, 10, 10, 0.95) 0%, rgba(10, 10, 10, 0.85) 38%, rgba(10, 10, 10, 0.42) 68%, rgba(10, 10, 10, 0.2) 100%),
+    radial-gradient(circle at 18% 12%, rgba(229, 9, 20, 0.14), transparent 46%);
+  z-index: -1;
 }
 
 .movie-of-day-body {
@@ -143,7 +164,7 @@
   color: var(--muted);
   background: var(--surface-3);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 16px;
   padding: 5px 12px;
 }
 
@@ -183,14 +204,14 @@
 /* ─── Responsive ─────────────────────────────────────────────── */
 
 @media (max-width: 960px) {
-  .movie-of-day-layout {
-    grid-template-columns: 160px 1fr;
-    gap: 20px;
+  .movie-of-day-layout { gap: 18px; }
+  .movie-of-day-layout-backdrop {
+    padding: 16px;
   }
 
-  .movie-of-day-poster-shell .tile-poster {
-    width: 160px;
-    height: 240px;
+  .movie-of-day-layout-backdrop::before {
+    background-position: right 8px center;
+    opacity: 0.3;
   }
 }
 
@@ -199,19 +220,22 @@
     padding: 24px 18px 28px;
   }
 
-  .movie-of-day-layout {
-    grid-template-columns: 120px 1fr;
-    gap: 16px;
-    align-items: flex-start;
+  .movie-of-day-layout { gap: 16px; }
+  .movie-of-day-layout-backdrop {
+    padding: 14px;
+    border-radius: 14px;
   }
 
-  .movie-of-day-poster-shell {
-    display: block;
+  .movie-of-day-layout-backdrop::before {
+    background-position: center center;
+    background-size: cover;
+    opacity: 0.32;
   }
 
-  .movie-of-day-poster-shell .tile-poster {
-    width: 120px;
-    height: 180px;
+  .movie-of-day-layout-backdrop::after {
+    background:
+      linear-gradient(180deg, rgba(10, 10, 10, 0.58) 0%, rgba(10, 10, 10, 0.84) 38%, rgba(10, 10, 10, 0.94) 100%),
+      radial-gradient(circle at 18% 12%, rgba(229, 9, 20, 0.12), transparent 46%);
   }
 }
 
@@ -221,13 +245,15 @@
     padding-right: 16px;
   }
 
-  .movie-of-day-layout {
-    grid-template-columns: 96px 1fr;
-    gap: 12px;
+  .movie-of-day-layout { gap: 14px; }
+  .movie-of-day-layout-backdrop {
+    padding: 12px;
+    border-radius: 12px;
   }
 
-  .movie-of-day-poster-shell .tile-poster {
-    width: 96px;
-    height: 144px;
+  .movie-of-day-layout-backdrop::before {
+    background-size: cover;
+    background-position: center center;
+    opacity: 0.3;
   }
 }

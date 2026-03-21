@@ -141,13 +141,37 @@ Rules:
 - If uncertain about a niche fact, state the uncertainty briefly instead of inventing details.`,
 };
 
-const THEME_SCORE_SEEDS = [
+const THEME_SCORE_LIBRARY = [
   { film: "Interstellar", track: "Cornfield Chase", composer: "Hans Zimmer" },
   { film: "Inception", track: "Time", composer: "Hans Zimmer" },
   { film: "Blade Runner 2049", track: "2049", composer: "Hans Zimmer" },
   { film: "The Dark Knight", track: "Why So Serious?", composer: "Hans Zimmer" },
   { film: "Dune", track: "Paul's Dream", composer: "Hans Zimmer" },
   { film: "La La Land", track: "Mia & Sebastian's Theme", composer: "Justin Hurwitz" },
+  { film: "The Godfather", track: "Main Title (The Godfather Waltz)", composer: "Nino Rota" },
+  { film: "Schindler's List", track: "Theme from Schindler's List", composer: "John Williams" },
+  { film: "Star Wars", track: "Main Title", composer: "John Williams" },
+  { film: "Jurassic Park", track: "Theme from Jurassic Park", composer: "John Williams" },
+  { film: "Pirates of the Caribbean", track: "He's a Pirate", composer: "Hans Zimmer" },
+  { film: "Gladiator", track: "Now We Are Free", composer: "Hans Zimmer" },
+  { film: "The Lord of the Rings", track: "Concerning Hobbits", composer: "Howard Shore" },
+  { film: "Harry Potter", track: "Hedwig's Theme", composer: "John Williams" },
+  { film: "Up", track: "Married Life", composer: "Michael Giacchino" },
+  { film: "The Lion King", track: "Circle of Life", composer: "Elton John" },
+  { film: "Spirited Away", track: "One Summer's Day", composer: "Joe Hisaishi" },
+  { film: "Amelie", track: "Comptine d'un autre ete", composer: "Yann Tiersen" },
+  { film: "Cinema Paradiso", track: "Love Theme", composer: "Ennio Morricone" },
+  { film: "The Good, the Bad and the Ugly", track: "The Ecstasy of Gold", composer: "Ennio Morricone" },
+  { film: "Requiem for a Dream", track: "Lux Aeterna", composer: "Clint Mansell" },
+  { film: "Tenet", track: "Posterity", composer: "Ludwig Goransson" },
+  { film: "Black Panther", track: "Wakanda", composer: "Ludwig Goransson" },
+  { film: "The Social Network", track: "Hand Covers Bruise", composer: "Trent Reznor" },
+  { film: "Soul", track: "Epiphany", composer: "Jon Batiste" },
+  { film: "Spider-Man: Into the Spider-Verse", track: "What's Up Danger", composer: "Blackway" },
+  { film: "Moonlight", track: "The Middle of the World", composer: "Nicholas Britell" },
+  { film: "Arrival", track: "On the Nature of Daylight", composer: "Max Richter" },
+  { film: "Everything Everywhere All at Once", track: "This Is a Life", composer: "Son Lux" },
+  { film: "Oppenheimer", track: "Can You Hear the Music", composer: "Ludwig Goransson" },
 ];
 
 const server = http.createServer(async (req, res) => {
@@ -1091,8 +1115,17 @@ function createChatFallbackAnswer(picks, message) {
 }
 
 
+function getDailyThemeSeeds() {
+  const dayBucket = getDailyCacheBucket(DAILY_TIMEZONE);
+  const daySeed = Number(dayBucket.replace(/-/g, ""));
+  const offset = daySeed % THEME_SCORE_LIBRARY.length;
+  const rotated = THEME_SCORE_LIBRARY.slice(offset).concat(THEME_SCORE_LIBRARY.slice(0, offset));
+  return rotated.slice(0, 6);
+}
+
 async function fetchThemeScores() {
-  const jobs = THEME_SCORE_SEEDS.map(async (seed) => {
+  const seeds = getDailyThemeSeeds();
+  const jobs = seeds.map(async (seed) => {
     const term = `${seed.film} ${seed.track} ${seed.composer}`;
     const params = new URLSearchParams({
       term,

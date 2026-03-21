@@ -490,7 +490,19 @@
 @media (max-width: 960px) {
   .theme-grid { grid-template-columns: 1fr; }
   .theme-featured { padding: 16px; height: auto; }
-  .theme-list { height: auto; overflow: visible; padding-right: 0; }
+  .theme-list {
+    height: auto;
+    max-height: min(52vh, 460px);
+    overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-color: rgba(0, 168, 255, 0.5) transparent;
+    scrollbar-width: thin;
+  }
+  .theme-list::-webkit-scrollbar { width: 6px; }
+  .theme-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 168, 255, 0.4);
+    border-radius: 999px;
+  }
   .theme-featured-media { min-height: 210px; }
 }
 
@@ -526,6 +538,7 @@
   .theme-player-btn { width: 100%; }
   .theme-player-time { text-align: left; min-width: 0; }
   .theme-wave { gap: 3px; }
+  .theme-list { max-height: min(48vh, 380px); }
 }
 
 @media (hover: none) {

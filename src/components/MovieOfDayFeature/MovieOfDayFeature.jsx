@@ -1,4 +1,3 @@
-import TilePoster from "../TilePoster/TilePoster";
 import FallbackNotice from "../FallbackNotice/FallbackNotice";
 import { normalizeArray } from "../../utils/helpers";
 import "./MovieOfDayFeature.css";
@@ -10,12 +9,13 @@ export default function MovieOfDayFeature({ item }) {
   const hasStreaming = streamingPlatforms.length > 0;
   const watchLabel = item?.watchStatus || "No streaming platforms found";
   const watchRegion = item?.watchRegion ? ` in ${item.watchRegion}` : "";
+  const posterSrc = item?.poster || "/1.jpg";
 
   return (
-    <div className="movie-of-day-layout">
-      <div className="movie-of-day-poster-shell">
-        <TilePoster item={item} />
-      </div>
+    <div
+      className="movie-of-day-layout movie-of-day-layout-backdrop"
+      style={{ "--movie-of-day-poster": `url("${posterSrc}")` }}
+    >
       <div className="movie-of-day-body">
         {item?.notice ? <FallbackNotice message={item.notice} /> : null}
         <div className="movie-of-day-heading">
