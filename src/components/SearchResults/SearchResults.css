@@ -1,0 +1,30 @@
+/* ─── Section Lead ───────────────────────────────────────────── */
+
+.section-lead {
+  margin-bottom: 4px;
+}
+
+.section-lead p {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.section-lead strong {
+  color: var(--ink);
+}
+
+/* ─── Result Grid ────────────────────────────────────────────── */
+
+.result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .result-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,10 @@
+/* ─── Fallback Note ──────────────────────────────────────────── */
+
+.fallback-note {
+  font-size: 0.72rem;
+  color: var(--warn);
+  background: var(--warn-soft);
+  padding: 8px 12px;
+  border-radius: 8px;
+  line-height: 1.5;
+}

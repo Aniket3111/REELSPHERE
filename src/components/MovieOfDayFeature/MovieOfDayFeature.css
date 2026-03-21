@@ -1,0 +1,233 @@
+/* ─── Movie of the Day — Section Shell ───────────────────────── */
+
+.movie-of-day {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  position: relative;
+}
+
+.movie-of-day::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 20%;
+  right: 20%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(229,9,20,0.4), transparent);
+  pointer-events: none;
+}
+
+.movie-of-day-copy {
+  padding: 40px 48px;
+}
+
+.movie-of-day-kicker {
+  display: inline-block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  border: 1px solid rgba(229, 9, 20, 0.3);
+  border-radius: 999px;
+  padding: 4px 14px;
+  margin-bottom: 24px;
+  background: rgba(229, 9, 20, 0.07);
+}
+
+.movie-of-day-copy h2 {
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 900;
+  line-height: 1.15;
+  margin-bottom: 10px;
+}
+
+.movie-of-day-copy > p {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+/* ─── Movie of the Day — Card Layout ────────────────────────── */
+
+.movie-of-day-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 32px;
+  align-items: stretch;
+}
+
+.movie-of-day-poster-shell {
+  flex-shrink: 0;
+}
+
+.movie-of-day-poster-shell .tile-poster {
+  width: 200px;
+  height: 300px;
+  border-radius: 12px;
+  aspect-ratio: unset;
+}
+
+.movie-of-day-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.movie-of-day-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.movie-of-day-topline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.movie-of-day-heading h2 {
+  font-size: clamp(1.5rem, 2.8vw, 2.2rem);
+  margin-bottom: 0;
+}
+
+.movie-of-day-hook {
+  font-size: 0.88rem;
+  color: var(--muted);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.movie-of-day-overview {
+  font-size: 0.86rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.movie-of-day-why {
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.movie-of-day-why span {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.movie-of-day-why p {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.movie-of-day-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.movie-of-day-highlight {
+  font-size: 0.78rem;
+  color: var(--muted);
+  background: var(--surface-3);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 12px;
+}
+
+.movie-of-day-meta {
+  margin-top: 0;
+}
+
+.movie-of-day-streaming {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 4px;
+}
+
+.movie-of-day-streaming-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.movie-of-day-streaming-empty {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.movie-of-day-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+
+@media (max-width: 960px) {
+  .movie-of-day-layout {
+    grid-template-columns: 160px 1fr;
+    gap: 20px;
+  }
+
+  .movie-of-day-poster-shell .tile-poster {
+    width: 160px;
+    height: 240px;
+  }
+}
+
+@media (max-width: 768px) {
+  .movie-of-day-copy {
+    padding: 24px 18px 28px;
+  }
+
+  .movie-of-day-layout {
+    grid-template-columns: 120px 1fr;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .movie-of-day-poster-shell {
+    display: block;
+  }
+
+  .movie-of-day-poster-shell .tile-poster {
+    width: 120px;
+    height: 180px;
+  }
+}
+
+@media (max-width: 640px) {
+  .movie-of-day-copy {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .movie-of-day-layout {
+    grid-template-columns: 96px 1fr;
+    gap: 12px;
+  }
+
+  .movie-of-day-poster-shell .tile-poster {
+    width: 96px;
+    height: 144px;
+  }
+}

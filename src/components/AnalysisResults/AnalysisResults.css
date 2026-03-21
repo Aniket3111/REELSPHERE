@@ -1,0 +1,166 @@
+/* ─── Analysis Layout ────────────────────────────────────────── */
+
+.analysis-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.signal-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.signal-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.signal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.signal-row span:first-child {
+  font-size: 0.82rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.signal-score {
+  font-family: "Bebas Neue", monospace;
+  font-size: 1rem;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+}
+
+.signal-bar-track {
+  height: 4px;
+  background: var(--surface-3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.signal-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+.signal-item > p {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ─── Taste Zones ────────────────────────────────────────────── */
+
+.taste-zones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.taste-zone-card {
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.taste-zone-card h4 {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.taste-zone-blind {
+  border-color: rgba(139, 92, 246, 0.2);
+  background: rgba(139, 92, 246, 0.05);
+}
+
+/* ─── Next Picks Grid ────────────────────────────────────────── */
+
+.next-picks-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.next-pick-item {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.next-pick-item .tile-poster {
+  width: 70px;
+  height: 105px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  aspect-ratio: unset;
+}
+
+.next-pick-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.next-pick-body strong {
+  font-size: 0.88rem;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.next-pick-body p {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ─── Result Card ────────────────────────────────────────────── */
+
+.result-card {
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.result-card h3 {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.result-card h4 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.result-card p {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .taste-zones {
+    grid-template-columns: 1fr;
+  }
+}
