@@ -141,6 +141,15 @@ Rules:
 - If uncertain about a niche fact, state the uncertainty briefly instead of inventing details.`,
 };
 
+const THEME_SCORE_SEEDS = [
+  { film: "Interstellar", track: "Cornfield Chase", composer: "Hans Zimmer" },
+  { film: "Inception", track: "Time", composer: "Hans Zimmer" },
+  { film: "Blade Runner 2049", track: "2049", composer: "Hans Zimmer" },
+  { film: "The Dark Knight", track: "Why So Serious?", composer: "Hans Zimmer" },
+  { film: "Dune", track: "Paul's Dream", composer: "Hans Zimmer" },
+  { film: "La La Land", track: "Mia & Sebastian's Theme", composer: "Justin Hurwitz" },
+];
+
 const server = http.createServer(async (req, res) => {
   try {
     const requestUrl = new URL(req.url, `http://${req.headers.host}`);
@@ -298,30 +307,26 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 200, { data: { titles: [] }, cached: false, fallback: true });
       }
     }
+    if (req.method === "GET" && requestUrl.pathname === "/api/theme-scores") {
+      try {
+        const cacheKey = createCacheKey("/api/theme-scores", { day: getDailyCacheBucket(DAILY_TIMEZONE) });
+        const cached = getCachedResponse(cacheKey);
+        if (cached) return sendJson(res, 200, { ...cached, cached: true });
+
+        const scores = await fetchThemeScores();
+        const result = { data: { scores } };
+        setCachedResponse(cacheKey, result, 12 * 60 * 60 * 1000);
+        return sendJson(res, 200, { ...result, cached: false });
+      } catch (error) {
+        console.error(error);
+        return sendJson(res, 200, { data: { scores: [] }, cached: false, fallback: true });
+      }
+    }
+
+
 
     if (req.method === "GET" && requestUrl.pathname === "/api/health") {
-      pruneMaps();
-      return sendJson(res, 200, {
-        ok: true,
-        model: GEMINI_MODEL,
-        api: "Google Gemini",
-        apiKeyConfigured: Boolean(GEMINI_API_KEY),
-        backupModels: GEMINI_FALLBACK_MODELS,
-        backupApiKeys: GEMINI_BACKUP_API_KEYS.length,
-        totalApiKeys: GEMINI_KEYS.length,
-        watchmode: {
-          configured: Boolean(WATCHMODE_API_KEY),
-          region: WATCHMODE_REGION,
-        },
-        rateLimit: {
-          maxRequests: RATE_LIMIT_MAX_REQUESTS,
-          windowMs: RATE_LIMIT_WINDOW_MS,
-        },
-        cache: {
-          ttlMs: CACHE_TTL_MS,
-          entries: responseCache.size,
-        },
-      });
+      return sendJson(res, 200, getHealthPayload());
     }
 
     return serveStatic(req, res, requestUrl);
@@ -967,6 +972,33 @@ function safeJsonParse(text) {
   }
 }
 
+function getHealthPayload() {
+  pruneMaps();
+  return {
+    ok: true,
+    model: GEMINI_MODEL,
+    api: "Google Gemini",
+    apiKeyConfigured: Boolean(GEMINI_API_KEY),
+    backupModels: GEMINI_FALLBACK_MODELS,
+    backupApiKeys: GEMINI_BACKUP_API_KEYS.length,
+    totalApiKeys: GEMINI_KEYS.length,
+    watchmode: {
+      configured: Boolean(WATCHMODE_API_KEY),
+      region: WATCHMODE_REGION,
+    },
+    rateLimit: {
+      maxRequests: RATE_LIMIT_MAX_REQUESTS,
+      windowMs: RATE_LIMIT_WINDOW_MS,
+    },
+    cache: {
+      ttlMs: CACHE_TTL_MS,
+      entries: responseCache.size,
+    },
+  };
+}
+
+
+
 function serveStatic(req, res, requestUrl) {
   if (!fs.existsSync(DIST_DIR)) {
     return sendText(
@@ -1058,6 +1090,38 @@ function createChatFallbackAnswer(picks, message) {
   return [message, "", "Quick fallback picks:", ...lines].join("\n");
 }
 
+
+async function fetchThemeScores() {
+  const jobs = THEME_SCORE_SEEDS.map(async (seed) => {
+    const term = `${seed.film} ${seed.track} ${seed.composer}`;
+    const params = new URLSearchParams({
+      term,
+      media: "music",
+      entity: "song",
+      limit: "5",
+    });
+
+    const response = await fetch(`https://itunes.apple.com/search?${params.toString()}`);
+    const body = await response.json();
+    const songs = Array.isArray(body.results) ? body.results : [];
+
+    const best = songs.find((song) => {
+      const name = String(song.trackName || "").toLowerCase();
+      const artist = String(song.artistName || "").toLowerCase();
+      return name.includes(String(seed.track).toLowerCase().slice(0, 6)) || artist.includes(String(seed.composer).toLowerCase().split(" ")[0]);
+    }) || songs[0] || {};
+
+    return {
+      ...seed,
+      previewUrl: best.previewUrl || "",
+      artworkUrl: best.artworkUrl100 ? String(best.artworkUrl100).replace("100x100bb", "600x600bb") : "",
+      storeUrl: best.trackViewUrl || "",
+      artist: best.artistName || seed.composer,
+    };
+  });
+
+  return Promise.all(jobs);
+}
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
@@ -1069,4 +1133,16 @@ function sendText(res, statusCode, payload) {
   res.writeHead(statusCode, { "Content-Type": "text/plain; charset=utf-8" });
   res.end(payload);
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
