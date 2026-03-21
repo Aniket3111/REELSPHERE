@@ -3177,12 +3177,14 @@ button[type="submit"]:hover {
 @media (min-width: 961px) {
   .theme-featured,
   .theme-list {
-    height: clamp(560px, 70vh, 760px);
+    height: clamp(620px, 76vh, 860px);
   }
 
   .theme-list {
     overflow-y: auto;
     padding-right: 6px;
+    scrollbar-color: rgba(0, 168, 255, 0.5) transparent;
+    scrollbar-width: thin;
   }
 
   .theme-list::-webkit-scrollbar {
@@ -3193,12 +3195,9 @@ button[type="submit"]:hover {
     background: rgba(0, 168, 255, 0.4);
     border-radius: 999px;
   }
+}
 
-  .theme-list {
-    scrollbar-color: rgba(0, 168, 255, 0.5) transparent;
-    scrollbar-width: thin;
-  }
-}@media (max-width: 960px) {
+@media (max-width: 960px) {
   .hero-main {
     grid-template-columns: 1fr;
   }
@@ -4129,5 +4128,7 @@ button[type="submit"]:hover {
   .theme-player-time { text-align: left; min-width: 0; }
   .theme-wave { gap: 3px; }
 }
+
+
 
 
