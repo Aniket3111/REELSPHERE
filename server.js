@@ -29,6 +29,7 @@ const RATE_LIMIT_WINDOW_MS = Number(
   process.env.RATE_LIMIT_WINDOW_MS || 60 * 60 * 1000,
 );
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_MS || 6 * 60 * 60 * 1000);
+const DAILY_TIMEZONE = process.env.DAILY_TIMEZONE || "Asia/Kolkata";
 const DIST_DIR = path.join(__dirname, "dist");
 
 const requestUsage = new Map();
@@ -203,17 +204,13 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === "GET" && requestUrl.pathname === "/api/movie-of-day") {
       if (!GEMINI_KEYS.length) {
-        const fallback = await createRateLimitFallback("/api/movie-of-day");
-        return sendJson(res, 200, {
-          ...fallback,
-          cached: false,
-          fallback: true,
-          limited: true,
-        });
+        const fallback = await getOrBuildFallback("/api/movie-of-day", null);
+        return sendJson(res, 200, { ...fallback, cached: false, fallback: true, limited: true });
       }
 
+      const dailyBucket = getDailyCacheBucket(DAILY_TIMEZONE);
       const cacheKey = createCacheKey("/api/movie-of-day", {
-        day: getDailyCacheBucket(),
+        day: dailyBucket,
         region: WATCHMODE_REGION,
       });
       const cached = getCachedResponse(cacheKey);
@@ -221,8 +218,17 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 200, { ...cached, cached: true });
       }
 
+      // Rate-limit check for uncached movie-of-day (only first load per day hits AI)
+      const ip = getClientIp(req);
+      const limitState = consumeRateLimit(ip);
+      if (!limitState.allowed) {
+        const fallback = await getOrBuildFallback("/api/movie-of-day", null);
+        return sendJson(res, 200, { ...fallback, cached: false, fallback: true, limited: true });
+      }
+
       try {
-        const prompt = `Date: ${new Date().toISOString().slice(0, 10)}\nRegion: ${WATCHMODE_REGION}\nSelect a movie of the day for a modern streaming dashboard audience.`;
+        const dailyTheme = getDailyTheme(dailyBucket);
+        const prompt = `Date: ${dailyBucket}\nTimezone: ${DAILY_TIMEZONE}\nRegion: ${WATCHMODE_REGION}\nTheme: ${dailyTheme}\nSelect a movie of the day for a modern streaming dashboard audience.`;
         const data = await callModelJson(SYSTEM_PROMPTS.movieOfDay, prompt);
         const [movie] = await enrichMovieList([data]);
         const result = { data: movie || data, notice: "" };
@@ -231,17 +237,65 @@ const server = http.createServer(async (req, res) => {
       } catch (error) {
         console.error(error);
         if (isGeminiQuotaError(error)) {
-          const fallback = await createRateLimitFallback("/api/movie-of-day");
-          return sendJson(res, 200, {
-            ...fallback,
-            cached: false,
-            fallback: true,
-            limited: true,
-          });
+          const fallback = await getOrBuildFallback("/api/movie-of-day", null);
+          return sendJson(res, 200, { ...fallback, cached: false, fallback: true, limited: true });
         }
-        return sendJson(res, 500, {
-          error: error.message || "Request failed.",
+        return sendJson(res, 500, { error: error.message || "Request failed." });
+      }
+    }
+
+    if (req.method === "GET" && requestUrl.pathname === "/api/trending") {
+      const cacheKey = createCacheKey("/api/trending", { region: WATCHMODE_REGION });
+      const cached = getCachedResponse(cacheKey);
+      if (cached) return sendJson(res, 200, { ...cached, cached: true });
+
+      if (!WATCHMODE_API_KEY) {
+        return sendJson(res, 200, { data: { titles: [] }, cached: false, fallback: true });
+      }
+
+      try {
+        const params = new URLSearchParams({
+          apiKey: WATCHMODE_API_KEY,
+          sort_by: "popularity_desc",
+          types: "movie,tv_series",
+          limit: "8",
+          regions: WATCHMODE_REGION,
         });
+        const listData = await fetchWatchmodeJson(`/list-titles/?${params.toString()}`);
+        const rawTitles = Array.isArray(listData.titles) ? listData.titles.slice(0, 6) : [];
+
+        const titles = await Promise.all(rawTitles.map(async (t) => {
+          try {
+            const details = await getWatchmodeTitleDetails(t.id);
+            const streamingPlatforms = extractPlatforms(details);
+            return {
+              id: t.id,
+              title: t.title,
+              year: String(t.year || ""),
+              type: t.type === "tv_series" || t.type === "tv_miniseries" ? "Series" : "Movie",
+              poster: pickPoster(details) || DEFAULT_POSTER_PATH,
+              streamingPlatforms,
+              desc: details.plot_overview || "",
+            };
+          } catch {
+            return {
+              id: t.id,
+              title: t.title,
+              year: String(t.year || ""),
+              type: t.type === "tv_series" || t.type === "tv_miniseries" ? "Series" : "Movie",
+              poster: DEFAULT_POSTER_PATH,
+              streamingPlatforms: [],
+              desc: "",
+            };
+          }
+        }));
+
+        const result = { data: { titles } };
+        setCachedResponse(cacheKey, result, CACHE_TTL_MS);
+        return sendJson(res, 200, { ...result, cached: false });
+      } catch (err) {
+        console.error(err);
+        return sendJson(res, 200, { data: { titles: [] }, cached: false, fallback: true });
       }
     }
 
@@ -328,12 +382,7 @@ async function handleJsonEndpoint(req, res, routeKey, handler) {
     const ip = getClientIp(req);
     const limitState = consumeRateLimit(ip);
     if (!limitState.allowed) {
-      const fallback = await createRateLimitFallback(routeKey);
-      if (routeKey === "/api/chat") {
-        fallback.data.answer = `${fallback.data.answer}
-
-Retry in about ${Math.ceil(limitState.retryAfterMs / 1000 / 60)} hour(s).`;
-      }
+      const fallback = await getOrBuildFallback(routeKey, limitState);
       return sendJson(res, 200, {
         ...fallback,
         cached: false,
@@ -349,7 +398,7 @@ Retry in about ${Math.ceil(limitState.retryAfterMs / 1000 / 60)} hour(s).`;
     console.error(error);
 
     if (isGeminiQuotaError(error)) {
-      const fallback = await createRateLimitFallback(routeKey);
+      const fallback = await getOrBuildFallback(routeKey, null);
       return sendJson(res, 200, {
         ...fallback,
         cached: false,
@@ -362,6 +411,21 @@ Retry in about ${Math.ceil(limitState.retryAfterMs / 1000 / 60)} hour(s).`;
       error: error.message || "Request failed.",
     });
   }
+}
+
+async function getOrBuildFallback(routeKey, limitState) {
+  const dailyBucket = getDailyCacheBucket(DAILY_TIMEZONE);
+  const fallbackCacheKey = createCacheKey(`fallback:${routeKey}`, { day: dailyBucket });
+  const cached = getCachedResponse(fallbackCacheKey);
+  if (cached) return cached;
+
+  const fallback = await createRateLimitFallback(routeKey);
+  if (limitState && routeKey === "/api/chat") {
+    fallback.data.answer = `${fallback.data.answer}\n\nRetry in about ${Math.ceil(limitState.retryAfterMs / 1000 / 60)} hour(s).`;
+  }
+  // Cache fallback for the rest of the day so Watchmode isn't hit repeatedly
+  setCachedResponse(fallbackCacheKey, fallback, 6 * 60 * 60 * 1000);
+  return fallback;
 }
 
 async function createRateLimitFallback(routeKey) {
@@ -442,7 +506,8 @@ async function createRateLimitFallback(routeKey) {
 }
 
 async function buildFallbackMovies() {
-  const daySeed = Number(new Date().toISOString().slice(8, 10));
+  const dayBucket = getDailyCacheBucket(DAILY_TIMEZONE);
+  const daySeed = Number(dayBucket.replace(/-/g, ""));
   const offset = daySeed % FALLBACK_LIBRARY.length;
   const rotated = FALLBACK_LIBRARY.slice(offset).concat(FALLBACK_LIBRARY.slice(0, offset));
   const selected = rotated.slice(0, 6).map((item) => ({ ...item }));
@@ -504,8 +569,27 @@ function setCachedResponse(cacheKey, value, ttlMs = CACHE_TTL_MS) {
   });
 }
 
-function getDailyCacheBucket() {
-  return new Date().toISOString().slice(0, 10);
+function getDailyCacheBucket(timeZone = "UTC") {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function getDailyTheme(dayBucket) {
+  const themes = [
+    "High-intensity thriller night",
+    "Elegant slow-burn cinema",
+    "Visually bold crowd-pleaser",
+    "Character-driven emotional drama",
+    "Sharp crime and noir storytelling",
+    "Ambitious sci-fi with ideas",
+    "Modern classic worth revisiting",
+  ];
+  const seed = Number(String(dayBucket || "").replace(/-/g, "")) || Date.now();
+  return themes[seed % themes.length];
 }
 
 function consumeRateLimit(ip) {
@@ -985,3 +1069,4 @@ function sendText(res, statusCode, payload) {
   res.writeHead(statusCode, { "Content-Type": "text/plain; charset=utf-8" });
   res.end(payload);
 }
+

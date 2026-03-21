@@ -1,28 +1,58 @@
 <svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="gradRS" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#8b5cf6"/>
-      <stop offset="100%" stop-color="#3b82f6"/>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e50914"/>
+      <stop offset="100%" stop-color="#ff784f"/>
     </linearGradient>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff784f"/>
+      <stop offset="50%" stop-color="#e50914"/>
+      <stop offset="100%" stop-color="#b0060f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(229,9,20,0.25)"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#e50914" flood-opacity="0.35"/>
+    </filter>
   </defs>
 
-  <!-- Background circle -->
-  <circle cx="128" cy="128" r="120" fill="#0b0f1a"/>
+  <!-- Background -->
+  <rect width="256" height="256" rx="56" fill="#0a0a0a"/>
+  <rect width="256" height="256" rx="56" fill="url(#glow)"/>
 
-  <!-- Orbit ring -->
-  <ellipse cx="128" cy="128" rx="110" ry="40"
-           fill="none"
-           stroke="url(#gradRS)"
-           stroke-width="10"
-           transform="rotate(-20 128 128)" />
+  <!-- Outer film reel ring -->
+  <circle cx="128" cy="128" r="98" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+  <circle cx="128" cy="128" r="108" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
 
-  <!-- RS Text -->
-  <text x="128" y="150"
+  <!-- Film sprocket holes around the ring -->
+  <circle cx="128" cy="24" r="6" fill="rgba(229,9,20,0.3)"/>
+  <circle cx="128" cy="232" r="6" fill="rgba(229,9,20,0.3)"/>
+  <circle cx="24" cy="128" r="6" fill="rgba(255,120,79,0.3)"/>
+  <circle cx="232" cy="128" r="6" fill="rgba(255,120,79,0.3)"/>
+  <circle cx="55" cy="55" r="5" fill="rgba(229,9,20,0.2)"/>
+  <circle cx="201" cy="55" r="5" fill="rgba(255,120,79,0.2)"/>
+  <circle cx="55" cy="201" r="5" fill="rgba(255,120,79,0.2)"/>
+  <circle cx="201" cy="201" r="5" fill="rgba(229,9,20,0.2)"/>
+
+  <!-- Inner accent circle -->
+  <circle cx="128" cy="128" r="68" fill="none" stroke="url(#grad1)" stroke-width="2.5" opacity="0.5"/>
+
+  <!-- Film play triangle -->
+  <path d="M112 92 L168 128 L112 164 Z" fill="url(#grad2)" filter="url(#shadow)" opacity="0.9"/>
+
+  <!-- RS text -->
+  <text x="128" y="222"
         text-anchor="middle"
-        font-size="110"
-        font-family="Poppins, Arial, sans-serif"
+        font-size="44"
+        font-family="Bebas Neue, Arial, sans-serif"
         font-weight="700"
-        fill="url(#gradRS)">
+        letter-spacing="0.2em"
+        fill="url(#grad1)">
     RS
   </text>
+
+  <!-- Subtle top highlight -->
+  <rect x="60" y="12" width="136" height="1" rx="1" fill="rgba(255,255,255,0.08)"/>
 </svg>

@@ -122,6 +122,7 @@ function getConfig() {
     rateLimitMaxRequests: Number(process.env.RATE_LIMIT_MAX_REQUESTS || 5),
     rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 60 * 60 * 1000),
     cacheTtlMs: Number(process.env.CACHE_TTL_MS || 6 * 60 * 60 * 1000),
+    dailyTimezone: process.env.DAILY_TIMEZONE || "Asia/Kolkata",
   };
 }
 
@@ -258,7 +259,8 @@ async function createRateLimitFallback(routeKey, config) {
 }
 
 async function buildFallbackMovies(config) {
-  const daySeed = Number(new Date().toISOString().slice(8, 10));
+  const dayBucket = getDailyCacheBucket(config.dailyTimezone);
+  const daySeed = Number(dayBucket.replace(/-/g, ""));
   const offset = daySeed % FALLBACK_LIBRARY.length;
   const rotated = FALLBACK_LIBRARY.slice(offset).concat(FALLBACK_LIBRARY.slice(0, offset));
   const selected = rotated.slice(0, 6).map((item) => ({ ...item }));
@@ -280,8 +282,9 @@ async function handleMovieOfDayRequest(req, res) {
       });
     }
 
+    const dailyBucket = getDailyCacheBucket(config.dailyTimezone);
     const cacheKey = createCacheKey("/api/movie-of-day", {
-      day: getDailyCacheBucket(),
+      day: dailyBucket,
       region: config.watchmodeRegion,
     });
     const cached = getCachedResponse(cacheKey);
@@ -289,7 +292,8 @@ async function handleMovieOfDayRequest(req, res) {
       return sendJson(res, 200, { ...cached, cached: true });
     }
 
-    const prompt = `Date: ${new Date().toISOString().slice(0, 10)}\nRegion: ${config.watchmodeRegion}\nSelect a movie of the day for a modern streaming dashboard audience.`;
+    const dailyTheme = getDailyTheme(dailyBucket);
+    const prompt = `Date: ${dailyBucket}\nTimezone: ${config.dailyTimezone}\nRegion: ${config.watchmodeRegion}\nTheme: ${dailyTheme}\nSelect a movie of the day for a modern streaming dashboard audience.`;
     const data = await callModelJson(SYSTEM_PROMPTS.movieOfDay, prompt, config);
     const [movie] = await enrichMovieList([data], config);
     const result = { data: movie || data, notice: "" };
@@ -432,8 +436,27 @@ function setCachedResponse(cacheKey, value, ttlMs) {
   });
 }
 
-function getDailyCacheBucket() {
-  return new Date().toISOString().slice(0, 10);
+function getDailyCacheBucket(timeZone = "UTC") {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function getDailyTheme(dayBucket) {
+  const themes = [
+    "High-intensity thriller night",
+    "Elegant slow-burn cinema",
+    "Visually bold crowd-pleaser",
+    "Character-driven emotional drama",
+    "Sharp crime and noir storytelling",
+    "Ambitious sci-fi with ideas",
+    "Modern classic worth revisiting",
+  ];
+  const seed = Number(String(dayBucket || "").replace(/-/g, "")) || Date.now();
+  return themes[seed % themes.length];
 }
 
 function consumeRateLimit(ip, maxRequests, windowMs) {
@@ -859,3 +882,4 @@ module.exports = {
   chatHandler,
   sendJson,
 };
+
