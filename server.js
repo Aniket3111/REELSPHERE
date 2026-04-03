@@ -292,7 +292,6 @@ const server = http.createServer(async (req, res) => {
           sort_by: "popularity_desc",
           types: "movie,tv_series",
           limit: "8",
-          regions: WATCHMODE_REGION,
         });
         const listData = await fetchWatchmodeJson(`/list-titles/?${params.toString()}`);
         const rawTitles = Array.isArray(listData.titles) ? listData.titles.slice(0, 6) : [];
@@ -324,7 +323,9 @@ const server = http.createServer(async (req, res) => {
         }));
 
         const result = { data: { titles } };
-        setCachedResponse(cacheKey, result, CACHE_TTL_MS);
+        if (titles.length > 0) {
+          setCachedResponse(cacheKey, result, CACHE_TTL_MS);
+        }
         return sendJson(res, 200, { ...result, cached: false });
       } catch (err) {
         console.error(err);
@@ -348,6 +349,11 @@ const server = http.createServer(async (req, res) => {
     }
 
 
+
+    if (req.method === "GET" && requestUrl.pathname === "/api/usage") {
+      const ip = getClientIp(req);
+      return sendJson(res, 200, { data: peekRateLimit(ip) });
+    }
 
     if (req.method === "GET" && requestUrl.pathname === "/api/health") {
       return sendJson(res, 200, getHealthPayload());
@@ -619,6 +625,24 @@ function getDailyTheme(dayBucket) {
   ];
   const seed = Number(String(dayBucket || "").replace(/-/g, "")) || Date.now();
   return themes[seed % themes.length];
+}
+
+function peekRateLimit(ip) {
+  pruneMaps();
+  const now = Date.now();
+  if (RATE_LIMIT_MAX_REQUESTS <= 0) {
+    return { remaining: 0, used: 0, max: 0, retryAfterMs: 0 };
+  }
+  const entry = requestUsage.get(ip);
+  if (!entry || now >= entry.expiresAt) {
+    return { remaining: RATE_LIMIT_MAX_REQUESTS, used: 0, max: RATE_LIMIT_MAX_REQUESTS, retryAfterMs: RATE_LIMIT_WINDOW_MS };
+  }
+  return {
+    remaining: Math.max(0, RATE_LIMIT_MAX_REQUESTS - entry.count),
+    used: entry.count,
+    max: RATE_LIMIT_MAX_REQUESTS,
+    retryAfterMs: Math.max(0, entry.expiresAt - now),
+  };
 }
 
 function consumeRateLimit(ip) {

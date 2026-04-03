@@ -4,11 +4,9 @@
   background: var(--surface-2);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
-  padding: 0 0 16px;
   overflow: hidden;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-direction: row;
   transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.45s cubic-bezier(0.23,1,0.32,1);
   transform-style: preserve-3d;
   will-change: transform;
@@ -21,9 +19,26 @@
     0 0 0 1px rgba(229, 9, 20, 0.1);
 }
 
-.result-tile > *:not(.tile-poster) {
-  padding-left: 14px;
-  padding-right: 14px;
+/* Fixed-width poster column */
+.result-tile .tile-poster {
+  width: 110px;
+  min-width: 110px;
+  aspect-ratio: 2 / 3;
+  height: auto;
+}
+
+.result-tile:hover .tile-poster img {
+  transform: scale(1.04);
+}
+
+/* Content column */
+.tile-body {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .tile-topline {
@@ -46,22 +61,22 @@
   font-weight: 700;
 }
 
-.result-tile:hover .tile-poster img {
-  transform: scale(1.04);
-}
-
 .result-tile h3 {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--ink);
   line-height: 1.3;
 }
 
-.result-tile p {
-  font-size: 0.78rem;
+.tile-desc {
+  font-size: 0.76rem;
   color: var(--muted);
-  line-height: 1.55;
+  line-height: 1.5;
   flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ─── Streaming Block ────────────────────────────────────────── */
@@ -69,11 +84,11 @@
 .streaming-block {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
 }
 
 .streaming-label {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--muted);
@@ -83,7 +98,7 @@
 .streaming-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 4px;
 }
 
 /* ─── Watch Row ──────────────────────────────────────────────── */
@@ -95,8 +110,6 @@
   gap: 8px;
   flex-wrap: wrap;
   margin-top: auto;
-  padding-left: 14px;
-  padding-right: 14px;
 }
 
 .watch-link {

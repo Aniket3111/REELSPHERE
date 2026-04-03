@@ -1,5 +1,7 @@
 # ReelSphere
 
+**[Live Demo → reelsphere.aniketrajani.com](https://reelsphere.aniketrajani.com)**
+
 AI-powered movie discovery platform. Search by mood, get smart recommendations, chat with a film brain, and decode your taste profile — all in one cinematic workspace.
 
 ## Features

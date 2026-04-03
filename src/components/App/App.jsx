@@ -30,6 +30,7 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState(initialChatMessages);
   const [chatLoading, setChatLoading] = useState(false);
   const [trendingState, setTrendingState] = useState({ status: "loading", data: null });
+  const [usageState, setUsageState] = useState(null);
   const [ledeText, setLedeText] = useState("");
   const [easterFlash, setEasterFlash] = useState(null);
 
@@ -38,7 +39,16 @@ export default function App() {
 
   const LEDE_FULL = "Search by mood, get sharper recommendations, chat with a film brain, and decode your taste patterns in one cinematic workspace.";
 
-  useEffect(() => { loadMovieOfDay(); loadTrending(); }, []);
+  useEffect(() => { loadMovieOfDay(); loadTrending(); loadUsage(); }, []);
+
+  async function loadUsage() {
+    try {
+      const body = await fetchJson("/api/usage", { method: "GET" });
+      setUsageState(body.data);
+    } catch {
+      // non-critical, ignore
+    }
+  }
   useEffect(() => { initRevealAnimations(); }, []);
   useEffect(() => { return initScrollScene(); }, []);
   useEffect(() => {
@@ -95,12 +105,22 @@ export default function App() {
     if (thread) thread.scrollTop = thread.scrollHeight;
   }, [chatMessages, chatLoading]);
 
-  async function loadTrending() {
+  async function loadTrending(attempt = 0) {
     try {
       const body = await fetchJson("/api/trending", { method: "GET" });
-      setTrendingState({ status: "ready", data: body.data });
+      if (body.data?.titles?.length > 0) {
+        setTrendingState({ status: "ready", data: body.data });
+      } else if (attempt < 3) {
+        setTimeout(() => loadTrending(attempt + 1), 2000 * (attempt + 1));
+      } else {
+        setTrendingState({ status: "error", data: null });
+      }
     } catch {
-      setTrendingState({ status: "error", data: null });
+      if (attempt < 3) {
+        setTimeout(() => loadTrending(attempt + 1), 2000 * (attempt + 1));
+      } else {
+        setTrendingState({ status: "error", data: null });
+      }
     }
   }
 
@@ -127,6 +147,8 @@ export default function App() {
       setSearchState({ status: "ready", data: { ...result.data, notice: result.notice || "", limited: Boolean(result.limited) }, error: "" });
     } catch (error) {
       setSearchState({ status: "error", data: null, error: error.message });
+    } finally {
+      loadUsage();
     }
   }
 
@@ -140,6 +162,8 @@ export default function App() {
       setRecommendState({ status: "ready", data: { ...result.data, notice: result.notice || "", limited: Boolean(result.limited) }, error: "" });
     } catch (error) {
       setRecommendState({ status: "error", data: null, error: error.message });
+    } finally {
+      loadUsage();
     }
   }
 
@@ -153,6 +177,8 @@ export default function App() {
       setAnalyzeState({ status: "ready", data: { ...result.data, notice: result.notice || "", limited: Boolean(result.limited) }, error: "" });
     } catch (error) {
       setAnalyzeState({ status: "error", data: null, error: error.message });
+    } finally {
+      loadUsage();
     }
   }
 
@@ -171,7 +197,17 @@ export default function App() {
       setChatMessages((current) => [...current, { role: "assistant", content: `Error: ${error.message}` }]);
     } finally {
       setChatLoading(false);
+      loadUsage();
     }
+  }
+
+  function formatMs(ms) {
+    const totalMins = Math.ceil(ms / 60000);
+    const hours = Math.floor(totalMins / 60);
+    const mins = totalMins % 60;
+    if (hours > 0 && mins > 0) return `${hours}h ${mins}m`;
+    if (hours > 0) return `${hours}h`;
+    return `${mins}m`;
   }
 
   function handleMoodClick(query) {
@@ -304,7 +340,21 @@ export default function App() {
               <span className="workspace-kicker">Your tools</span>
               <h2 className="workspace-title">Search. Recommend. Chat. Analyze.</h2>
             </div>
-            <span className="workspace-count">4 tools</span>
+            {usageState && (
+              <div className="usage-badge">
+                <div className="usage-bar-track">
+                  <div
+                    className="usage-bar-fill"
+                    style={{ width: `${((usageState.max - usageState.remaining) / usageState.max) * 100}%` }}
+                  />
+                </div>
+                <span className="usage-label">
+                  {usageState.remaining > 0
+                    ? <><strong>{usageState.remaining}</strong> of {usageState.max} AI calls left today</>
+                    : <>Limit reached · resets in {formatMs(usageState.retryAfterMs)}</>}
+                </span>
+              </div>
+            )}
           </div>
           <div className="tab-bar">
             {TOOLS.map((tool) => (
@@ -343,19 +393,25 @@ export default function App() {
                 </ToolPane>
               )}
               {activeTool === "chat" && (
-                <ToolPane image="/film_brain.jpg" index="03" title="Film Brain" description="Ask about directors, filmographies, hidden links, watch orders, or double features." tall>
-                  <div id="chat-thread" className="chat-thread">
-                    {chatMessages.map((msg, i) => (
-                      <div key={`${msg.role}-${i}`} className={`chat-bubble ${msg.role}`}>
-                        <p>{msg.content}</p>
-                      </div>
-                    ))}
-                    {chatLoading && <div className="chat-bubble assistant"><LoadingDots /></div>}
+                <ToolPane image="/film_brain.jpg" index="03" title="Film Brain" description="Ask about directors, filmographies, hidden links, watch orders, or double features.">
+                  <div className="chat-hint-panel">
+                    <p className="chat-hint-heading">Try asking…</p>
+                    <div className="chat-hint-grid">
+                      {[
+                        { q: "What should I watch after Parasite?", icon: "🎬" },
+                        { q: "Best Kubrick films ranked", icon: "🏆" },
+                        { q: "Films like Arrival but more emotional", icon: "💫" },
+                        { q: "Hidden gems from the 90s", icon: "💎" },
+                        { q: "Double feature: Heat + ?", icon: "🎭" },
+                        { q: "Best cinematography of the decade", icon: "📽" },
+                      ].map((hint) => (
+                        <button key={hint.q} type="button" className="hint-chip" onClick={() => { setChatInput(hint.q); document.querySelector(".chat-input-field")?.focus(); }}>
+                          <span>{hint.icon}</span>
+                          <span>{hint.q}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <form className="chat-form" onSubmit={handleChatSubmit}>
-                    <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Ask a movie question..." />
-                    <button type="submit">Send</button>
-                  </form>
                 </ToolPane>
               )}
               {activeTool === "taste" && (
@@ -369,15 +425,17 @@ export default function App() {
             </div>
 
             <div className="split-right">
-              <div className="results-header">
-                <span className="results-label">Results</span>
-                {activeTool === "search" && searchState.status === "ready" && (
-                  <span className="results-count">{searchState.data?.results?.length ?? 0} titles</span>
-                )}
-                {activeTool === "recommend" && recommendState.status === "ready" && (
-                  <span className="results-count">{recommendState.data?.recommendations?.length ?? 0} picks</span>
-                )}
-              </div>
+              {activeTool !== "chat" && (
+                <div className="results-header">
+                  <span className="results-label">Results</span>
+                  {activeTool === "search" && searchState.status === "ready" && (
+                    <span className="results-count">{searchState.data?.results?.length ?? 0} titles</span>
+                  )}
+                  {activeTool === "recommend" && recommendState.status === "ready" && (
+                    <span className="results-count">{recommendState.data?.recommendations?.length ?? 0} picks</span>
+                  )}
+                </div>
+              )}
 
               {activeTool === "search" && (
                 <ResultPane state={searchState} emptyText="Describe a mood or vibe to surface matching films.">
@@ -390,23 +448,23 @@ export default function App() {
                 </ResultPane>
               )}
               {activeTool === "chat" && (
-                <div className="chat-hint-panel">
-                  <div className="chat-hint-grid">
-                    {[
-                      { q: "What should I watch after Parasite?", icon: "🎬" },
-                      { q: "Best Kubrick films ranked", icon: "🏆" },
-                      { q: "Films like Arrival but more emotional", icon: "💫" },
-                      { q: "Hidden gems from the 90s", icon: "💎" },
-                      { q: "Double feature: Heat + ?", icon: "🎭" },
-                      { q: "Best cinematography of the decade", icon: "📽" },
-                    ].map((hint) => (
-                      <button key={hint.q} type="button" className="hint-chip" onClick={() => { setChatInput(hint.q); document.querySelector(".chat-form input")?.focus(); }}>
-                        <span>{hint.icon}</span>
-                        <span>{hint.q}</span>
-                      </button>
-                    ))}
+                <div className="chat-right-panel">
+                  <div className="results-header">
+                    <span className="results-label">Conversation</span>
+                    {chatMessages.length > 1 && <span className="results-count">{chatMessages.length - 1} messages</span>}
                   </div>
-                  <p className="chat-hint-note">Click a suggestion or type your own question in the chat.</p>
+                  <div id="chat-thread" className="chat-thread chat-thread-full">
+                    {chatMessages.map((msg, i) => (
+                      <div key={`${msg.role}-${i}`} className={`chat-bubble ${msg.role}`}>
+                        <p>{msg.content}</p>
+                      </div>
+                    ))}
+                    {chatLoading && <div className="chat-bubble assistant"><LoadingDots /></div>}
+                  </div>
+                  <form className="chat-form chat-form-right" onSubmit={handleChatSubmit}>
+                    <input className="chat-input-field" type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Ask a movie question…" />
+                    <button type="submit">Send</button>
+                  </form>
                 </div>
               )}
               {activeTool === "taste" && (

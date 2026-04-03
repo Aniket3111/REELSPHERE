@@ -1,10 +1,10 @@
 .tile-poster {
   width: 100%;
-  aspect-ratio: 3 / 4;
-  max-height: 190px;
+  aspect-ratio: 2 / 3;
   overflow: hidden;
   background: var(--surface-3);
   position: relative;
+  flex-shrink: 0;
 }
 
 .tile-poster img {
