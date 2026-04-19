@@ -1,7 +1,11 @@
 /* ─── Result Tile ────────────────────────────────────────────── */
 
 .result-tile {
-  background: var(--surface-2);
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.03) 0%, transparent 45%),
+    var(--surface-2);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   overflow: hidden;
@@ -12,11 +16,28 @@
   will-change: transform;
 }
 
+.result-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(229, 9, 20, 0.7), rgba(255, 120, 79, 0.35));
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  z-index: 1;
+  pointer-events: none;
+}
+
 .result-tile:hover {
   border-color: rgba(229, 9, 20, 0.35);
+  transform: translateY(-2px);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 14px 36px rgba(0, 0, 0, 0.45),
     0 0 0 1px rgba(229, 9, 20, 0.1);
+}
+
+.result-tile:hover::before {
+  opacity: 1;
 }
 
 /* Fixed-width poster column */
@@ -44,33 +65,47 @@
 .tile-topline {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .tile-year {
-  font-size: 0.7rem;
-  color: var(--muted);
+  font-size: 0.64rem;
+  color: rgba(240, 240, 240, 0.65);
   letter-spacing: 0.06em;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 8px;
 }
 
 .tile-tag {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--accent);
   font-weight: 700;
+  background: rgba(229, 9, 20, 0.1);
+  border: 1px solid rgba(229, 9, 20, 0.2);
+  border-radius: 999px;
+  padding: 3px 8px;
 }
 
 .result-tile h3 {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--ink);
-  line-height: 1.3;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .tile-desc {
   font-size: 0.76rem;
-  color: var(--muted);
+  color: rgba(240, 240, 240, 0.55);
   line-height: 1.5;
   flex: 1;
   display: -webkit-box;
@@ -117,17 +152,25 @@
 }
 
 .watch-link {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(229, 9, 20, 0.28);
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: rgba(229, 9, 20, 0.08);
   font-size: 0.72rem;
   font-weight: 700;
-  color: var(--accent);
+  color: rgba(255, 185, 174, 0.95);
   text-decoration: none;
   letter-spacing: 0.04em;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.15s ease, border-color 0.15s ease, background 0.15s ease;
   flex-shrink: 0;
 }
 
 .watch-link:hover {
-  opacity: 0.75;
+  opacity: 1;
+  border-color: rgba(229, 9, 20, 0.5);
+  background: rgba(229, 9, 20, 0.16);
 }
 
 @media (hover: none) {
@@ -136,10 +179,46 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 960px), (hover: none) and (pointer: coarse) {
+  .result-tile {
+    flex-direction: column;
+    border-radius: 14px;
+  }
+
   .result-tile .tile-poster {
-    width: 92px;
-    min-width: 92px;
+    width: 100%;
+    min-width: 0;
+    aspect-ratio: 2.15 / 1;
+    background:
+      radial-gradient(circle at 18% 28%, rgba(255, 255, 255, 0.15), transparent 48%),
+      linear-gradient(180deg, rgba(10, 10, 10, 0) 38%, rgba(10, 10, 10, 0.78) 100%);
+  }
+
+  .result-tile .tile-poster::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(10, 10, 10, 0.08) 0%, rgba(10, 10, 10, 0.72) 100%),
+      linear-gradient(90deg, rgba(229, 9, 20, 0.2), transparent 45%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .result-tile .tile-poster img {
+    position: relative;
+    z-index: 0;
+    opacity: 0.92;
+    transform: scale(1.05);
+    transform-origin: center 36%;
+  }
+
+  .result-tile:hover .tile-poster img {
+    transform: scale(1.08);
+  }
+
+  .result-tile .tile-poster-fallback span {
+    z-index: 2;
   }
 
   .tile-body {
@@ -148,7 +227,7 @@
   }
 
   .result-tile h3 {
-    font-size: 0.84rem;
+    font-size: 0.88rem;
     line-height: 1.25;
   }
 
@@ -160,24 +239,12 @@
   .watch-row {
     align-items: flex-start;
   }
-}
-
-@media (max-width: 520px) {
-  .result-tile {
-    flex-direction: column;
-  }
-
-  .result-tile .tile-poster {
-    width: 100%;
-    min-width: 0;
-    aspect-ratio: 16 / 9;
-  }
-
-  .tile-body {
-    padding: 12px 12px 14px;
-  }
 
   .watch-link {
     margin-left: auto;
+  }
+
+  .tile-topline {
+    gap: 6px;
   }
 }

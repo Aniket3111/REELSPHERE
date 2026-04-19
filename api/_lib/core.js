@@ -445,6 +445,80 @@ function getDailyCacheBucket(timeZone = "UTC") {
   }).format(new Date());
 }
 
+async function handleTrendingRequest(req, res) {
+  const config = getConfig();
+
+  try {
+    const cacheKey = createCacheKey("/api/trending", { region: config.watchmodeRegion });
+    const cached = getCachedResponse(cacheKey);
+    if (cached) {
+      return sendJson(res, 200, { ...cached, cached: true });
+    }
+
+    if (!config.watchmodeApiKey) {
+      return sendJson(res, 200, { data: { titles: [] }, cached: false, fallback: true });
+    }
+
+    const params = new URLSearchParams({
+      apiKey: config.watchmodeApiKey,
+      sort_by: "popularity_desc",
+      types: "movie,tv_series",
+      limit: "8",
+    });
+    const listData = await fetchWatchmodeJson(`/list-titles/?${params.toString()}`);
+    const rawTitles = Array.isArray(listData.titles) ? listData.titles.slice(0, 6) : [];
+
+    const titles = await Promise.all(
+      rawTitles.map(async (title) => {
+        try {
+          const details = await getWatchmodeTitleDetails(title.id, config);
+          const streamingPlatforms = extractPlatforms(details, config.watchmodeRegion);
+          return {
+            id: title.id,
+            title: title.title,
+            year: String(title.year || ""),
+            type:
+              title.type === "tv_series" || title.type === "tv_miniseries"
+                ? "Series"
+                : "Movie",
+            poster: pickPoster(details) || DEFAULT_POSTER_PATH,
+            streamingPlatforms,
+            desc: details.plot_overview || "",
+          };
+        } catch {
+          return {
+            id: title.id,
+            title: title.title,
+            year: String(title.year || ""),
+            type:
+              title.type === "tv_series" || title.type === "tv_miniseries"
+                ? "Series"
+                : "Movie",
+            poster: DEFAULT_POSTER_PATH,
+            streamingPlatforms: [],
+            desc: "",
+          };
+        }
+      }),
+    );
+
+    const result = { data: { titles } };
+    if (titles.length > 0) {
+      setCachedResponse(cacheKey, result, config.cacheTtlMs);
+    }
+    return sendJson(res, 200, { ...result, cached: false });
+  } catch (error) {
+    console.error(error);
+    return sendJson(res, 200, { data: { titles: [] }, cached: false, fallback: true });
+  }
+}
+
+function getUsagePayload(req) {
+  const config = getConfig();
+  const ip = getClientIp(req);
+  return peekRateLimit(ip, config.rateLimitMaxRequests, config.rateLimitWindowMs);
+}
+
 function getDailyTheme(dayBucket) {
   const themes = [
     "High-intensity thriller night",
@@ -495,6 +569,32 @@ function consumeRateLimit(ip, maxRequests, windowMs) {
     allowed: true,
     remaining: maxRequests - entry.count,
     retryAfterMs: entry.expiresAt - now,
+  };
+}
+
+function peekRateLimit(ip, maxRequests, windowMs) {
+  pruneMaps();
+  const now = Date.now();
+
+  if (maxRequests <= 0) {
+    return { remaining: 0, used: 0, max: 0, retryAfterMs: 0 };
+  }
+
+  const entry = requestUsage.get(ip);
+  if (!entry || now >= entry.expiresAt) {
+    return {
+      remaining: maxRequests,
+      used: 0,
+      max: maxRequests,
+      retryAfterMs: windowMs,
+    };
+  }
+
+  return {
+    remaining: Math.max(0, maxRequests - entry.count),
+    used: entry.count,
+    max: maxRequests,
+    retryAfterMs: Math.max(0, entry.expiresAt - now),
   };
 }
 
@@ -875,7 +975,9 @@ function sendJson(res, statusCode, payload) {
 module.exports = {
   handleApiRequest,
   handleMovieOfDayRequest,
+  handleTrendingRequest,
   getHealthPayload,
+  getUsagePayload,
   searchHandler,
   recommendationsHandler,
   analyzeTasteHandler,
