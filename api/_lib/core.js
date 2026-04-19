@@ -5,6 +5,7 @@ const WATCHMODE_BASE_URL = "https://api.watchmode.com/v1";
 const DEFAULT_POSTER_PATH = "/1.jpg";
 const requestUsage = new Map();
 const responseCache = new Map();
+const RATE_LIMIT_COOKIE_NAME = "ai_usage_v1";
 
 const FALLBACK_LIBRARY = [
   { title: "Inception", year: "2010", blurb: "High-concept suspense with precision set pieces.", genres: ["Sci-Fi", "Thriller"], tone: ["Sleek", "Mind-bending"], vibe: ["Cerebral", "Big-screen"] },
@@ -144,8 +145,7 @@ async function handleApiRequest(req, res, routeKey, handler) {
       return sendJson(res, 200, { ...cached, cached: true });
     }
 
-    const ip = getClientIp(req);
-    const limitState = consumeRateLimit(ip, config.rateLimitMaxRequests, config.rateLimitWindowMs);
+    const limitState = consumeRateLimit(req, res, config.rateLimitMaxRequests, config.rateLimitWindowMs);
     if (!limitState.allowed) {
       const fallback = await createRateLimitFallback(routeKey, config);
       if (routeKey === "/api/chat") {
@@ -515,8 +515,7 @@ async function handleTrendingRequest(req, res) {
 
 function getUsagePayload(req) {
   const config = getConfig();
-  const ip = getClientIp(req);
-  return peekRateLimit(ip, config.rateLimitMaxRequests, config.rateLimitWindowMs);
+  return peekRateLimit(req, config.rateLimitMaxRequests, config.rateLimitWindowMs);
 }
 
 function getDailyTheme(dayBucket) {
@@ -533,7 +532,7 @@ function getDailyTheme(dayBucket) {
   return themes[seed % themes.length];
 }
 
-function consumeRateLimit(ip, maxRequests, windowMs) {
+function consumeRateLimit(req, res, maxRequests, windowMs) {
   pruneMaps();
   const now = Date.now();
 
@@ -541,13 +540,13 @@ function consumeRateLimit(ip, maxRequests, windowMs) {
     return { allowed: false, remaining: 0, retryAfterMs: windowMs };
   }
 
-  const entry = requestUsage.get(ip);
-
-  if (!entry || now >= entry.expiresAt) {
-    requestUsage.set(ip, {
+  const cookieEntry = readRateLimitCookie(req);
+  if (!cookieEntry || now >= cookieEntry.expiresAt) {
+    const nextEntry = {
       count: 1,
       expiresAt: now + windowMs,
-    });
+    };
+    writeRateLimitCookie(res, nextEntry);
     return {
       allowed: true,
       remaining: maxRequests - 1,
@@ -555,24 +554,28 @@ function consumeRateLimit(ip, maxRequests, windowMs) {
     };
   }
 
-  if (entry.count >= maxRequests) {
+  if (cookieEntry.count >= maxRequests) {
+    writeRateLimitCookie(res, cookieEntry);
     return {
       allowed: false,
       remaining: 0,
-      retryAfterMs: entry.expiresAt - now,
+      retryAfterMs: cookieEntry.expiresAt - now,
     };
   }
 
-  entry.count += 1;
-  requestUsage.set(ip, entry);
+  const nextEntry = {
+    count: cookieEntry.count + 1,
+    expiresAt: cookieEntry.expiresAt,
+  };
+  writeRateLimitCookie(res, nextEntry);
   return {
     allowed: true,
-    remaining: maxRequests - entry.count,
-    retryAfterMs: entry.expiresAt - now,
+    remaining: maxRequests - nextEntry.count,
+    retryAfterMs: nextEntry.expiresAt - now,
   };
 }
 
-function peekRateLimit(ip, maxRequests, windowMs) {
+function peekRateLimit(req, maxRequests, windowMs) {
   pruneMaps();
   const now = Date.now();
 
@@ -580,7 +583,7 @@ function peekRateLimit(ip, maxRequests, windowMs) {
     return { remaining: 0, used: 0, max: 0, retryAfterMs: 0 };
   }
 
-  const entry = requestUsage.get(ip);
+  const entry = readRateLimitCookie(req);
   if (!entry || now >= entry.expiresAt) {
     return {
       remaining: maxRequests,
@@ -612,6 +615,69 @@ function pruneMaps() {
       requestUsage.delete(key);
     }
   }
+}
+
+function readRateLimitCookie(req) {
+  const cookies = parseCookies(req);
+  const raw = cookies[RATE_LIMIT_COOKIE_NAME];
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    const count = Number(parsed?.count);
+    const expiresAt = Number(parsed?.expiresAt);
+    if (!Number.isFinite(count) || !Number.isFinite(expiresAt)) return null;
+    if (count < 0 || expiresAt <= 0) return null;
+    return { count, expiresAt };
+  } catch {
+    return null;
+  }
+}
+
+function writeRateLimitCookie(res, entry) {
+  const maxAgeMs = Math.max(0, entry.expiresAt - Date.now());
+  const maxAgeSec = Math.max(1, Math.ceil(maxAgeMs / 1000));
+  const isProd = process.env.NODE_ENV === "production";
+  const value = encodeURIComponent(JSON.stringify(entry));
+  const cookie = [
+    `${RATE_LIMIT_COOKIE_NAME}=${value}`,
+    `Max-Age=${maxAgeSec}`,
+    "Path=/",
+    "SameSite=Lax",
+    isProd ? "Secure" : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
+
+  appendSetCookieHeader(res, cookie);
+}
+
+function parseCookies(req) {
+  const rawCookie = String(req?.headers?.cookie || "");
+  if (!rawCookie) return {};
+  const pairs = rawCookie.split(";");
+  const result = {};
+  for (const pair of pairs) {
+    const idx = pair.indexOf("=");
+    if (idx <= 0) continue;
+    const key = pair.slice(0, idx).trim();
+    const value = pair.slice(idx + 1).trim();
+    result[key] = decodeURIComponent(value);
+  }
+  return result;
+}
+
+function appendSetCookieHeader(res, cookieValue) {
+  const current = res.getHeader("Set-Cookie");
+  if (!current) {
+    res.setHeader("Set-Cookie", cookieValue);
+    return;
+  }
+  if (Array.isArray(current)) {
+    res.setHeader("Set-Cookie", [...current, cookieValue]);
+    return;
+  }
+  res.setHeader("Set-Cookie", [String(current), cookieValue]);
 }
 
 async function callModelJson(systemPrompt, userPrompt, config) {

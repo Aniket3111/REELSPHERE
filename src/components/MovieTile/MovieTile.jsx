@@ -12,11 +12,14 @@ export default function MovieTile({ item, label, description, tags }) {
     <article className="result-tile">
       <TilePoster item={item} />
       <div className="tile-body">
-        <div className="tile-topline">
-          <span className="tile-year">{item.year || "?"}</span>
-          <span className="tile-tag">{label}</span>
+        <div className="tile-main">
+          <div className="tile-topline">
+            <span className="tile-year">{item.year || "?"}</span>
+            <span className="tile-tag">{label}</span>
+          </div>
+          <h3>{item.title || "Unknown title"}</h3>
+          <p className="tile-desc">{description || ""}</p>
         </div>
-        <h3>{item.title || "Unknown title"}</h3>
         {hasStreaming ? (
           <div className="streaming-block">
             <span className="streaming-label">Streaming</span>
@@ -28,7 +31,6 @@ export default function MovieTile({ item, label, description, tags }) {
         <div className="meta">
           {normalizeArray(tags).map((tag) => <span key={tag} className="chip">{tag}</span>)}
         </div>
-        <p className="tile-desc">{description || ""}</p>
         <div className="watch-row">
           <span className={`watch-status ${hasStreaming && item?.watchLink ? "watch-status-live" : "watch-status-muted"}`}>
             {status}{region}

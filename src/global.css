@@ -628,4 +628,7 @@ button[type="submit"]:hover {
     height: 280px;
     filter: blur(60px);
   }
+  .result-grid{
+  grid-template-columns: 1fr;
+    }
 }
