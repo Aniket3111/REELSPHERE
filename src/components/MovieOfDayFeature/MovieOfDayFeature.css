@@ -95,6 +95,7 @@
 
 .movie-of-day-body {
   display: flex;
+  width: 72%;
   flex-direction: column;
   gap: 16px;
 }
@@ -244,7 +245,9 @@
     padding-left: 16px;
     padding-right: 16px;
   }
-
+  .movie-of-day-body {
+    width: 100%;
+  }
   .movie-of-day-layout { gap: 14px; }
   .movie-of-day-layout-backdrop {
     padding: 12px;
